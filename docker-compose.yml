@@ -1,0 +1,20 @@
+# Run: docker compose up --build
+# App: http://localhost:5005  (database and uploads persist in named volumes)
+services:
+  medipath:
+    build: .
+    ports:
+      - "${MEDIPATH_PUBLISH_PORT:-5005}:5005"
+    environment:
+      MEDIPATH_HOST: "0.0.0.0"
+      MEDIPATH_PORT: "5005"
+      # Optional: set a fixed secret when moving between PCs (defaults to random each boot)
+      # SECRET_KEY: "change-me-to-a-long-random-string"
+      # MEDIPATH_DATABASE_URI: "sqlite:////app/backend/instance/medipath.db"
+    volumes:
+      - medipath_instance:/app/backend/instance
+      - medipath_uploads:/app/uploads
+
+volumes:
+  medipath_instance:
+  medipath_uploads:

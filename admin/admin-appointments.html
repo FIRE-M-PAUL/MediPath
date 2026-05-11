@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Appointments - MediPath Admin</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body style="background-color: #f8fafc;">
+
+    <!-- Admin Mobile Header -->
+    <header class="admin-mobile-header">
+        <div class="logo">
+            <span class="logo-cross">+</span> MediPath
+        </div>
+        <button class="hamburger-btn" onclick="toggleSidebar()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">
+            ☰
+        </button>
+    </header>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="admin-dashboard.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath <span style="font-size: 0.8rem; opacity: 0.7;">Admin</span>
+                </a>
+            </div>
+            
+            <p class="sidebar-label">Management</p>
+            <ul class="sidebar-menu">
+                <li><a href="admin-dashboard.html" class="sidebar-link">📊 System Overview</a></li>
+                <li><a href="admin-doctors.html" class="sidebar-link">👨‍⚕️ Verify Physicians</a></li>
+                <li><a href="admin-patients.html" class="sidebar-link">👥 Manage Patients</a></li>
+                <li><a href="admin-appointments.html" class="sidebar-link active">📅 All Appointments</a></li>
+                <li><a href="admin-admins.html" class="sidebar-link">🛡️ Manage Team</a></li>
+                <li><a href="admin-reports.html" class="sidebar-link">📈 Analytics Reports</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <button onclick="logoutAdmin()" class="sidebar-link logout-link" style="width: 100%; border: none; cursor: pointer;">
+                    🚪 Logout System
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="mb-3" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 style="font-weight: 800; letter-spacing: -0.02em;">Schedule Records</h1>
+                    <p style="color: #64748b;">System-wide monitoring of medical consultations.</p>
+                </div>
+            </header>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Patient Name</th>
+                                <th>Physician</th>
+                                <th>Scheduled Date/Time</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-appts-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../script.js"></script>
+    <script src="admin.js"></script>
+    <script>
+        async function renderApptsTable() {
+            const appts = await API.getAdminAppointments();
+            const tbody = document.getElementById('admin-appts-tbody');
+            
+            tbody.innerHTML = appts.map(a => `
+                <tr class="animate-fadeIn">
+                    <td><div style="font-weight: 700;">${a.patientName}</div></td>
+                    <td>${a.doctorName}</td>
+                    <td>${formatDate(a.dateTime)}</td>
+                    <td>${getStatusBadge(a.status)}</td>
+                    <td>
+                        <button onclick="cancelAppt(${a.id})" class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #fecaca;">Cancel Override</button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" class="text-center py-5">No appointment records found in database.</td></tr>';
+        }
+
+        document.addEventListener('DOMContentLoaded', renderApptsTable);
+    </script>
+</body>
+</html>

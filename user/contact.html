@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Contact the MediPath healthcare support team for assistance.">
+    <title>Contact Us - MediPath</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+
+    <!-- ===== NAVBAR ===== -->
+    <header>
+        <nav class="navbar" id="main-navbar" role="navigation" aria-label="Main navigation">
+            <div class="nav-container">
+                <a href="index.html" class="logo" aria-label="MediPath Home">
+                    <span class="logo-cross">+</span> MediPath
+                </a>
+                <ul class="nav-menu" id="nav-menu">
+                    <li><a href="index.html"          class="nav-item" data-page="index">Home</a></li>
+                    <li><a href="index.html#services"  class="nav-item" data-page="services">Services</a></li>
+                    <li><a href="doctors.html"         class="nav-item" data-page="doctors">Find Doctor</a></li>
+                    <li><a href="appointments.html"    class="nav-item" data-page="appointments">Appointments</a></li>
+                    <li><a href="index.html#emergency" class="nav-item emergency-link" data-page="emergency">🚨 Emergency</a></li>
+                    <li><a href="contact.html"         class="nav-item" data-page="contact">Contact</a></li>
+                </ul>
+                <div class="nav-auth" id="nav-auth">
+                    <a href="login.html"    class="btn btn-outline btn-sm" id="login-btn">Login</a>
+                    <a href="register.html" class="btn btn-primary btn-sm" id="register-btn">Register</a>
+                </div>
+                <div class="nav-right">
+                    <button id="dark-mode-toggle" title="Toggle Dark Mode" aria-label="Toggle dark mode">🌙</button>
+                    <button class="hamburger" id="hamburger" aria-label="Toggle mobile menu" aria-expanded="false">
+                        <span></span><span></span><span></span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- ===== PAGE HEADER ===== -->
+    <div class="page-hero">
+        <div class="container">
+            <span class="section-badge">Get in Touch</span>
+            <h1 class="page-hero-title">Contact Us</h1>
+            <p class="page-hero-desc">We are here to assist with any healthcare navigation queries. Our support team responds within 24 hours.</p>
+        </div>
+    </div>
+
+    <!-- ===== CONTACT CONTENT ===== -->
+    <div class="container mt-2 mb-3">
+        <div class="grid-2" style="align-items: start;">
+
+            <!-- Contact Form -->
+            <div class="form-container" style="margin: 0; border-top: 4px solid var(--primary-color);">
+                <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Send a Message</h2>
+                <p class="text-light" style="font-size: 0.9rem; margin-bottom: 2rem;">We'll get back to you as soon as possible.</p>
+
+                <form onsubmit="handleContactForm(event)">
+                    <div class="form-group">
+                        <label for="contact-name">Your Name</label>
+                        <input type="text" id="contact-name" class="form-control" required placeholder="Full Name" aria-label="Your name">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-email">Email Address</label>
+                        <input type="email" id="contact-email" class="form-control" required placeholder="email@address.com" aria-label="Email address">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-subject">Subject</label>
+                        <input type="text" id="contact-subject" class="form-control" required placeholder="How can we help you?" aria-label="Subject">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-message">Message</label>
+                        <textarea id="contact-message" class="form-control" rows="5" required
+                            placeholder="Describe your query in detail..." aria-label="Your message"></textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem;" aria-label="Send message">
+                            📨 Send Message
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Contact Info Panel -->
+            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div class="card" style="border-left: 4px solid var(--primary-color);">
+                    <span style="font-size: 2rem; margin-bottom: 0.75rem; display: block;">📍</span>
+                    <h4 style="font-size: 1rem; margin-bottom: 0.25rem;">Our Address</h4>
+                    <p class="text-light" style="font-size: 0.9rem; margin-bottom: 0;">123 Health Avenue, Medical District, City 90001</p>
+                </div>
+                <div class="card" style="border-left: 4px solid var(--success-color);">
+                    <span style="font-size: 2rem; margin-bottom: 0.75rem; display: block;">📞</span>
+                    <h4 style="font-size: 1rem; margin-bottom: 0.25rem;">Phone Number</h4>
+                    <p class="text-light" style="font-size: 0.9rem; margin-bottom: 0;">
+                        <a href="tel:+15550006334" style="color: var(--text-light);">+1 (555) 000-MEDI</a>
+                    </p>
+                </div>
+                <div class="card" style="border-left: 4px solid var(--warning-color);">
+                    <span style="font-size: 2rem; margin-bottom: 0.75rem; display: block;">✉️</span>
+                    <h4 style="font-size: 1rem; margin-bottom: 0.25rem;">Email Support</h4>
+                    <p class="text-light" style="font-size: 0.9rem; margin-bottom: 0;">
+                        <a href="mailto:support@medipath.health" style="color: var(--primary-color);">support@medipath.health</a>
+                    </p>
+                </div>
+                <div class="card" style="border-left: 4px solid var(--accent-color);">
+                    <span style="font-size: 2rem; margin-bottom: 0.75rem; display: block;">🕐</span>
+                    <h4 style="font-size: 1rem; margin-bottom: 0.25rem;">Support Hours</h4>
+                    <p class="text-light" style="font-size: 0.9rem; margin-bottom: 0;">24/7 Emergency Support<br>Mon–Fri: 8am – 8pm (Standard)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="disclaimer">
+        ⚠️ MediPath serves as a navigator. Always seek professional emergency services for life-threatening conditions.
+    </footer>
+
+    <script src="/script.js"></script>
+    <script>
+        function handleContactForm(e) {
+            e.preventDefault();
+            e.target.reset();
+            showToast('Message sent! Our team will respond within 24 hours.', 'success');
+        }
+    </script>
+</body>
+
+</html>

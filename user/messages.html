@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - MediPath</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .messages-wrap { max-width: 1200px; margin: 2rem auto; display: grid; grid-template-columns: 320px 1fr; gap: 1rem; }
+        .thread-list { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden; }
+        .thread-list-header { padding: 1rem 1.25rem; font-weight: 700; border-bottom: 1px solid var(--border-color); }
+        .thread-item { padding: 0.9rem 1.25rem; border-bottom: 1px solid var(--border-color); cursor: pointer; }
+        .thread-item:hover, .thread-item.active { background: rgba(37, 99, 235, 0.08); }
+        .chat-panel { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-lg); display: flex; flex-direction: column; min-height: 520px; }
+        .chat-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); font-weight: 700; }
+        .chat-body { flex: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.6rem; }
+        .chat-empty { margin: auto; color: var(--text-light); text-align: center; }
+        .msg { max-width: 72%; padding: 0.7rem 0.9rem; border-radius: 0.9rem; line-height: 1.35; }
+        .msg-sent { align-self: flex-end; background: var(--primary-color); color: #fff; }
+        .msg-recv { align-self: flex-start; background: rgba(148, 163, 184, 0.2); color: var(--text-color); }
+        .msg-time { display: block; font-size: 0.72rem; opacity: 0.8; margin-top: 0.25rem; }
+        .chat-footer { display: flex; gap: 0.7rem; padding: 0.9rem; border-top: 1px solid var(--border-color); }
+        @media (max-width: 900px) { .messages-wrap { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body style="background-color: var(--bg-color);">
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="dashboard.html" class="logo"><span class="logo-cross">+</span> MediPath</a>
+                <ul class="nav-menu">
+                    <li><a href="dashboard.html" class="nav-item">Dashboard</a></li>
+                    <li><a href="doctors.html" class="nav-item">Find Doctor</a></li>
+                    <li><a href="appointments.html" class="nav-item">Appointments</a></li>
+                    <li><a href="user/messages.html" class="nav-item active">Messages</a></li>
+                </ul>
+                <div class="nav-auth"><button onclick="Auth.logout()" class="btn btn-outline btn-sm">Sign Out</button></div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="messages-wrap">
+            <aside class="thread-list">
+                <div class="thread-list-header">Doctors</div>
+                <div id="thread-list-body">
+                    <div class="text-light" style="padding:1rem;">Loading conversations...</div>
+                </div>
+            </aside>
+
+            <section class="chat-panel">
+                <div class="chat-header" id="chat-peer-name">Select a doctor</div>
+                <div class="chat-body" id="chat-body">
+                    <div class="chat-empty">When a doctor confirms your appointment and starts chat, messages appear here.</div>
+                </div>
+                <div class="chat-footer">
+                    <input id="msg-input" class="form-control" type="text" placeholder="Type your response..." />
+                    <button id="send-btn" class="btn btn-primary">Send</button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="/script.js"></script>
+    <script>
+        Auth.requireAuth('patient');
+
+        let activeDoctorId = null;
+        let activeDoctorName = '';
+        let threadDoctors = [];
+        const pageParams = new URLSearchParams(window.location.search);
+        const preselectedDoctorId = Number(pageParams.get('doctor_id') || 0);
+        const preselectedDoctorName = pageParams.get('doctor_name') || 'Doctor';
+
+        function renderThreadList() {
+            const body = document.getElementById('thread-list-body');
+            if (!Array.isArray(threadDoctors) || threadDoctors.length === 0) {
+                body.innerHTML = '<div class="text-light" style="padding:1rem;">No doctor has started a conversation yet.</div>';
+                return;
+            }
+            body.innerHTML = threadDoctors.map((d) => `
+                <div class="thread-item ${activeDoctorId === d.id ? 'active' : ''}" onclick="openDoctorThread(${d.id}, ${JSON.stringify(d.name)})">
+                    <div style="font-weight:700;">${d.name}</div>
+                    <div class="text-light" style="font-size:0.8rem;">${d.email || ''}</div>
+                </div>
+            `).join('');
+        }
+
+        async function loadThreads(autoOpen = true) {
+            const res = await API.getMessageConversations();
+            threadDoctors = (res && res.success && Array.isArray(res.items)) ? res.items : [];
+            renderThreadList();
+            if (preselectedDoctorId > 0 && !activeDoctorId) {
+                const match = threadDoctors.find((d) => Number(d.id) === preselectedDoctorId);
+                if (match) {
+                    openDoctorThread(match.id, match.name);
+                    return;
+                }
+                activeDoctorId = preselectedDoctorId;
+                activeDoctorName = preselectedDoctorName;
+                document.getElementById('chat-peer-name').textContent = activeDoctorName;
+                document.getElementById('chat-body').innerHTML = '<div class="chat-empty">Wait for this doctor to start the conversation first.</div>';
+                showToast('The doctor has not started this chat yet.', 'info');
+                return;
+            }
+            if (autoOpen && !activeDoctorId && threadDoctors.length > 0) {
+                openDoctorThread(threadDoctors[0].id, threadDoctors[0].name);
+            }
+        }
+
+        async function openDoctorThread(id, name) {
+            activeDoctorId = id;
+            activeDoctorName = name || 'Doctor';
+            document.getElementById('chat-peer-name').textContent = activeDoctorName;
+            renderThreadList();
+            await renderMessages();
+        }
+
+        async function renderMessages() {
+            const body = document.getElementById('chat-body');
+            if (!activeDoctorId) {
+                body.innerHTML = '<div class="chat-empty">Select a doctor to view messages.</div>';
+                return;
+            }
+            const res = await API.getMessageThread(activeDoctorId);
+            const items = (res && res.success && Array.isArray(res.items)) ? res.items : [];
+            if (!items.length) {
+                body.innerHTML = '<div class="chat-empty">No messages yet. Wait for your doctor to begin.</div>';
+                return;
+            }
+            const me = Auth.getUser();
+            body.innerHTML = items.map((m) => `
+                <div class="msg ${m.sender_id === me.id ? 'msg-sent' : 'msg-recv'}">
+                    ${m.content}
+                    <span class="msg-time">${new Date(m.timestamp).toLocaleString()}</span>
+                </div>
+            `).join('');
+            body.scrollTop = body.scrollHeight;
+        }
+
+        async function sendPatientMessage() {
+            const input = document.getElementById('msg-input');
+            const text = (input.value || '').trim();
+            if (!text || !activeDoctorId) return;
+            const res = await API.sendMessage({ receiver_id: activeDoctorId, content: text });
+            if (!res || res.success === false) {
+                showToast(res?.message || 'Unable to send message.', 'error');
+                return;
+            }
+            input.value = '';
+            await renderMessages();
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Auth.refreshSession();
+            await loadThreads(true);
+            document.getElementById('send-btn').addEventListener('click', sendPatientMessage);
+            document.getElementById('msg-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendPatientMessage();
+            });
+        });
+    </script>
+</body>
+</html>

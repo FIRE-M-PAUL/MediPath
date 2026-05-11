@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Profile - MediPath</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body style="background-color: var(--bg-color);">
+
+    <!-- ===== NAVBAR ===== -->
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="doctor-dashboard.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath <span style="color: var(--text-light); font-weight: 500; font-size: 0.9rem;">Doctor Console</span>
+                </a>
+                <div class="nav-auth">
+                    <span id="doc-active-name" style="font-weight: 600; font-size: 0.9rem; margin-right: 1rem;"></span>
+                    <button onclick="Auth.logout()" class="btn btn-outline btn-sm">Sign Out</button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <p class="sidebar-label">Main Menu</p>
+            <ul class="sidebar-menu">
+                <li><a href="doctor-dashboard.html" class="sidebar-link">📊 Dashboard Overview</a></li>
+                <li><a href="doctor-appointments.html" class="sidebar-link">📅 Patient Appointments</a></li>
+                <li><a href="doctor-messages.html" class="sidebar-link">💬 Consultations / Messages</a></li>
+                <li><a href="doctor-profile.html" class="sidebar-link active">👤 Professional Profile</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <div class="dashboard-header">
+                <div>
+                    <h2>Clinical Profile</h2>
+                    <p class="text-light">Curate your professional presence in the MediPath specialist directory.</p>
+                </div>
+            </div>
+
+            <div class="container" style="max-width: 900px; margin: 0 auto;">
+                <div class="card">
+                    <form id="doc-profile-form" novalidate>
+                        <div class="grid-2" style="gap: 1.5rem;">
+                            <div class="form-group">
+                                <label for="fullname">Full Name</label>
+                                <input type="text" id="fullname" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="email">Email Address</label>
+                                <input type="email" id="email" class="form-control" readonly style="background: var(--bg-color);">
+                            </div>
+                        </div>
+
+                        <div class="grid-2 mt-1" style="gap: 1.5rem;">
+                            <div class="form-group">
+                                <label for="specialty">Specialty</label>
+                                <input type="text" id="specialty" class="form-control" readonly style="background: var(--bg-color);">
+                            </div>
+                            <div class="form-group">
+                                <label for="phone">Phone Number</label>
+                                <input type="tel" id="phone" class="form-control" required
+                                       oninput="this.value = this.value.replace(/[^0-9]/g, '')" pattern="\d*">
+                            </div>
+                        </div>
+
+                        <div class="grid-2 mt-1" style="gap: 1.5rem;">
+                            <div class="form-group">
+                                <label for="hospital">Primary Facility</label>
+                                <input type="text" id="hospital" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="experience">Years of Experience</label>
+                                <input type="number" id="experience" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-1">
+                            <label for="active-toggle-btn">Active Status</label>
+                            <button type="button" id="active-toggle-btn" class="btn btn-outline" style="width:100%;">
+                                Active (Click to turn off)
+                            </button>
+                        </div>
+
+                        <div class="form-group mt-1">
+                            <label for="profile-image-input">Profile Picture</label>
+                            <input type="file" id="profile-image-input" class="form-control" accept="image/*">
+                            <small class="text-light">Upload a clear headshot (JPG/PNG/WebP, up to ~1.5MB recommended).</small>
+                            <div style="margin-top:0.6rem;">
+                                <img id="profile-image-preview" alt="Profile preview" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:2px solid #dbeafe;display:none;">
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-1">
+                            <label for="availability">Availability Schedule</label>
+                            <input type="text" id="availability" class="form-control" placeholder="e.g. Mon-Fri, 09:00 - 17:00">
+                        </div>
+
+                        <div class="form-group mt-1">
+                            <label for="bio">Professional Biography</label>
+                            <textarea id="bio" class="form-control" rows="5" placeholder="Briefly describe your clinical background and patient care philosophy..."></textarea>
+                        </div>
+
+                        <div class="form-group mt-2">
+                            <button type="submit" class="btn btn-primary" style="width: 100%; border-radius: var(--radius-sm); padding: 1.25rem; font-size: 1rem;">
+                                Update Profile Records
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/script.js"></script>
+    <script>
+        Auth.requireAuth('doctor');
+        let isDoctorActive = true;
+        let selectedProfileImageData = '';
+
+        function renderActiveToggle() {
+            const btn = document.getElementById('active-toggle-btn');
+            if (!btn) return;
+            btn.textContent = isDoctorActive
+                ? 'Active (Click to turn off)'
+                : 'Inactive (Click to turn on)';
+            btn.classList.toggle('btn-primary', isDoctorActive);
+            btn.classList.toggle('btn-outline', !isDoctorActive);
+        }
+
+        async function persistActiveStatus() {
+            const result = await API.updateDoctorProfile({ is_active: isDoctorActive });
+            if (result && result.success) {
+                showToast(
+                    isDoctorActive ? 'Doctor is now Active.' : 'Doctor is now Inactive.',
+                    'success'
+                );
+                return true;
+            }
+            showToast(result?.message || 'Failed to update active status.', 'error');
+            return false;
+        }
+
+        function bindProfileImagePicker(initialImage) {
+            const input = document.getElementById('profile-image-input');
+            const preview = document.getElementById('profile-image-preview');
+            selectedProfileImageData = initialImage || '';
+            if (preview && selectedProfileImageData) {
+                preview.src = selectedProfileImageData;
+                preview.style.display = 'block';
+            }
+            if (!input) return;
+            input.addEventListener('change', () => {
+                const file = input.files && input.files[0] ? input.files[0] : null;
+                if (!file) return;
+                if (!file.type.startsWith('image/')) {
+                    showToast('Please choose an image file.', 'error');
+                    input.value = '';
+                    return;
+                }
+                if (file.size > 1500000) {
+                    showToast('Image too large. Please use a file under 1.5MB.', 'error');
+                    input.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = async () => {
+                    selectedProfileImageData = String(reader.result || '');
+                    if (preview && selectedProfileImageData) {
+                        preview.src = selectedProfileImageData;
+                        preview.style.display = 'block';
+                    }
+                    const saveResult = await API.updateDoctorProfile({ profile_image: selectedProfileImageData });
+                    if (saveResult && saveResult.success) {
+                        showToast('Profile picture updated.', 'success');
+                        return;
+                    }
+                    showToast(saveResult?.message || 'Failed to upload profile picture.', 'error');
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            const sessionDoc = Auth.getUser() || {};
+            const activeNameEl = document.getElementById('doc-active-name');
+            if (activeNameEl) activeNameEl.textContent = sessionDoc.name || 'Doctor';
+            const response = await API.getDoctorProfile();
+            const doc = (response && response.success && response.doctor) ? response.doctor : sessionDoc;
+            const fullnameEl = document.getElementById('fullname');
+            const emailEl = document.getElementById('email');
+            const phoneEl = document.getElementById('phone');
+            const specialtyEl = document.getElementById('specialty');
+            const hospitalEl = document.getElementById('hospital');
+            const experienceEl = document.getElementById('experience');
+            const availabilityEl = document.getElementById('availability');
+            const bioEl = document.getElementById('bio');
+            if (fullnameEl) fullnameEl.value = doc.name || '';
+            if (emailEl) emailEl.value = doc.email || '';
+            if (phoneEl) phoneEl.value = doc.phone || '';
+            if (specialtyEl) specialtyEl.value = doc.specialty || '';
+            if (hospitalEl) hospitalEl.value = doc.hospital || '';
+            if (experienceEl) experienceEl.value = doc.experience || 0;
+            if (availabilityEl) availabilityEl.value = doc.availability || '';
+            isDoctorActive = doc.is_active !== false;
+            renderActiveToggle();
+            if (bioEl) bioEl.value = doc.bio || '';
+            bindProfileImagePicker(doc.profile_image || '');
+
+            const toggleBtn = document.getElementById('active-toggle-btn');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', async () => {
+                    const prev = isDoctorActive;
+                    isDoctorActive = !isDoctorActive;
+                    renderActiveToggle();
+                    toggleBtn.disabled = true;
+                    const ok = await persistActiveStatus();
+                    if (!ok) {
+                        isDoctorActive = prev;
+                        renderActiveToggle();
+                    }
+                    toggleBtn.disabled = false;
+                });
+            }
+        });
+
+        const profileForm = document.getElementById('doc-profile-form');
+        if (profileForm) {
+            profileForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const user = Auth.getUser();
+                
+                const updates = {
+                    name:      document.getElementById('fullname').value,
+                    phone:     document.getElementById('phone').value,
+                    hospital:  document.getElementById('hospital').value,
+                    experience:document.getElementById('experience').value,
+                    is_active: isDoctorActive,
+                    profile_image: selectedProfileImageData,
+                    availability: document.getElementById('availability').value,
+                    bio:       document.getElementById('bio').value
+                };
+
+                const result = await API.updateDoctorProfile(updates);
+                if (result && result.success) {
+                    localStorage.setItem('mediPath_session', JSON.stringify({ ...user, ...updates }));
+                    showToast('Professional profile updated successfully!', 'success');
+                    setTimeout(() => location.reload(), 1200);
+                    return;
+                }
+                showToast(result?.message || 'Profile update failed.', 'error');
+            });
+        }
+    </script>
+</body>
+
+</html>

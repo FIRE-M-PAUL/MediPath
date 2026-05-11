@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Appointments - MediPath</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body style="background-color: var(--bg-color);">
+
+    <!-- ===== NAVBAR ===== -->
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="doctor-dashboard.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath <span style="color: var(--text-light); font-weight: 500; font-size: 0.9rem;">Doctor Console</span>
+                </a>
+                <div class="nav-auth">
+                    <span id="doc-active-name" style="font-weight: 600; font-size: 0.9rem; margin-right: 1rem;"></span>
+                    <button onclick="Auth.logout()" class="btn btn-outline btn-sm">Sign Out</button>
+                </div>
+                <div class="nav-right">
+                    <button id="dark-mode-toggle">🌙</button>
+                    <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <p class="sidebar-label">Main Menu</p>
+            <ul class="sidebar-menu">
+                <li><a href="doctor-dashboard.html" class="sidebar-link">📊 Dashboard Overview</a></li>
+                <li><a href="doctor-appointments.html" class="sidebar-link active">📅 Patient Appointments</a></li>
+                <li><a href="doctor-messages.html" class="sidebar-link">💬 Consultations / Messages</a></li>
+                <li><a href="doctor-profile.html" class="sidebar-link">👤 Professional Profile</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <div class="dashboard-header">
+                <div>
+                    <h2>Patient Appointments</h2>
+                    <p class="text-light">Review and manage clinical scheduling requests.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Patient Name</th>
+                                <th>Schedule</th>
+                                <th>Symptoms / Notes</th>
+                                <th>Current Status</th>
+                                <th style="text-align: right;">Enforcement Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="doc-appts-tbody">
+                            <tr><td colspan="5" class="text-center text-light">Loading consultations...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Reschedule Modal (Simple for now) -->
+    <div id="reschedule-modal" style="display: none; position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 1rem;">
+        <div class="card" style="max-width: 400px; width: 100%;">
+            <h3>Reschedule Appointment</h3>
+            <p class="text-light mb-2">Select a new date and time for this consultation.</p>
+            <input type="datetime-local" id="new-datetime" class="form-control mb-2">
+            <div style="display: flex; gap: 1rem;">
+                <button onclick="commitReschedule()" class="btn btn-primary" style="flex: 1;">Update</button>
+                <button onclick="closeModal()" class="btn btn-outline" style="flex: 1;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+    <script>
+        Auth.requireAuth('doctor');
+        let currentRescheduleId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Auth.refreshSession();
+            const doc = Auth.getUser();
+            const activeNameEl = document.getElementById('doc-active-name');
+            if (doc && activeNameEl) activeNameEl.textContent = doc.name;
+            await renderDoctorAppointments();
+        });
+
+        async function renderDoctorAppointments() {
+            const tbody = document.getElementById('doc-appts-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-light">Loading…</td></tr>`;
+            const raw = await API.getClinicalAppointments();
+            const docAppts = Array.isArray(raw) ? raw : [];
+
+            if (docAppts.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-light">No patient records found.</td></tr>`;
+                return;
+            }
+
+            const sorted = [...docAppts].sort((x, y) =>
+                String(y.appointment_date || '').localeCompare(String(x.appointment_date || '')));
+
+            const canAct = (st) => st !== 'Completed' && st !== 'Cancelled';
+
+            tbody.innerHTML = sorted.map(a => {
+                const id = a.appointment_id;
+                const nm = a.patient_name || 'Patient';
+                const notes = (a.notes || '').replace(/</g, '&lt;');
+                return `<tr>
+                    <td style="font-weight:700;">${nm}</td>
+                    <td>${formatDate(a.appointment_date)}</td>
+                    <td style="max-width: 250px; font-size: 0.85rem; color: var(--text-light);">${notes || 'N/A'}</td>
+                    <td>${getStatusBadge(a.status)}</td>
+                    <td style="text-align: right;">
+                        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                            ${a.status === 'Pending' ? `
+                                <button type="button" class="btn btn-primary btn-sm" onclick="updateStatus(${id}, 'Approved')">Accept</button>
+                                <button type="button" class="btn btn-accent btn-sm" onclick="updateStatus(${id}, 'Rejected')">Reject</button>
+                            ` : ''}
+                            ${canAct(a.status) && a.status !== 'Pending' ? `
+                                <button type="button" class="btn btn-outline btn-sm" onclick="openRescheduleModal(${id})">Reschedule</button>
+                                <button type="button" class="btn btn-outline btn-sm" style="color: var(--success-color); border-color: var(--success-color);" onclick="updateStatus(${id}, 'Completed')">Mark Done</button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function updateStatus(id, status) {
+            const payload = {};
+            if (status === 'Rejected') {
+                const reason = prompt('Please provide a reason for rejection (e.g., schedule conflict):');
+                if (reason === null) return;
+                payload.status = 'Cancelled';
+                payload.notes = reason.trim() || 'Declined by physician.';
+            } else if (status === 'Approved') {
+                payload.status = 'Confirmed';
+            } else {
+                payload.status = status;
+            }
+            const result = await API.updateClinicalAppointment(id, payload);
+            if (result && result.success === false) {
+                showToast(result.message || 'Update failed', 'error');
+                return;
+            }
+            showToast('Appointment updated.', status === 'Rejected' ? 'error' : 'success');
+            await renderDoctorAppointments();
+        }
+
+        function openRescheduleModal(id) {
+            currentRescheduleId = id;
+            document.getElementById('reschedule-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('reschedule-modal').style.display = 'none';
+        }
+
+        async function commitReschedule() {
+            const newDate = document.getElementById('new-datetime').value;
+            if (!newDate) { showToast('Please select a new date/time.', 'error'); return; }
+            const iso = new Date(newDate).toISOString();
+            const result = await API.updateClinicalAppointment(currentRescheduleId, {
+                appointment_date: iso,
+                status: 'Pending'
+            });
+            if (result && result.success === false) {
+                showToast(result.message || 'Update failed', 'error');
+                return;
+            }
+            showToast('Appointment rescheduled.', 'info');
+            closeModal();
+            await renderDoctorAppointments();
+        }
+    </script>
+</body>
+
+</html>

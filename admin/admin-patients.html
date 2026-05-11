@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Patients - MediPath Admin</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body style="background-color: #f8fafc;">
+
+    <!-- Admin Mobile Header -->
+    <header class="admin-mobile-header">
+        <div class="logo">
+            <span class="logo-cross">+</span> MediPath
+        </div>
+        <button class="hamburger-btn" onclick="toggleSidebar()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">
+            ☰
+        </button>
+    </header>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="admin-dashboard.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath <span style="font-size: 0.8rem; opacity: 0.7;">Admin</span>
+                </a>
+            </div>
+            
+            <p class="sidebar-label">Management</p>
+            <ul class="sidebar-menu">
+                <li><a href="admin-dashboard.html" class="sidebar-link">📊 System Overview</a></li>
+                <li><a href="admin-doctors.html" class="sidebar-link">👨‍⚕️ Verify Physicians</a></li>
+                <li><a href="admin-patients.html" class="sidebar-link active">👥 Manage Patients</a></li>
+                <li><a href="admin-appointments.html" class="sidebar-link">📅 All Appointments</a></li>
+                <li><a href="admin-admins.html" class="sidebar-link">🛡️ Manage Team</a></li>
+                <li><a href="admin-reports.html" class="sidebar-link">📈 Analytics Reports</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <button onclick="logoutAdmin()" class="sidebar-link logout-link" style="width: 100%; border: none; cursor: pointer;">
+                    🚪 Logout System
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="mb-3" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 style="font-weight: 800; letter-spacing: -0.02em;">Patient Registry</h1>
+                    <p style="color: #64748b;">Manage system-wide patient records and security.</p>
+                </div>
+            </header>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Patient Name</th>
+                                <th>Email</th>
+                                <th>Contact Number</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-patients-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../script.js"></script>
+    <script src="admin.js"></script>
+    <script>
+        async function renderPatientsTable() {
+            const users = await API.getUsers();
+            const tbody = document.getElementById('admin-patients-tbody');
+            const currentUser = Auth.getUser();
+
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <div style="font-weight: 700;">${u.name}</div>
+                            ${u.role === 'admin' ? '<span class="status-badge status-approved" style="font-size:0.6rem; padding:0.1rem 0.3rem;">ADMIN</span>' : ''}
+                        </div>
+                    </td>
+                    <td>${u.email}</td>
+                    <td>${u.role === 'admin' ? '🛡️ Administrator Access' : (u.phone || 'N/A')}</td>
+                    <td>
+                        <div style="display:flex; gap:0.5rem;">
+                            ${u.role === 'patient' ? `
+                                <button onclick="promoteToAdmin(${u.id})" class="btn btn-primary btn-sm" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">🛡️ Promote</button>
+                            ` : ''}
+                            ${u.id !== currentUser.id ? `
+                                <button onclick="deletePatient(${u.id})" class="btn btn-outline btn-sm" style="color: #ef4444; border-color: #fecaca; padding: 0.25rem 0.6rem; font-size: 0.75rem;">Delete</button>
+                            ` : '<em>Self (Base Admin)</em>'}
+                        </div>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="4" class="text-center py-3">No patient records found in database.</td></tr>';
+        }
+
+        document.addEventListener('DOMContentLoaded', renderPatientsTable);
+    </script>
+</body>
+</html>

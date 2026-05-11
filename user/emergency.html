@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MediPath Emergency Services — Get immediate healthcare assistance.">
+    <title>Emergency Services - MediPath</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        body { background-color: #fff5f5; display: flex; flex-direction: column; min-height: 100vh; }
+        [data-theme="dark"] body { background-color: #1a0a0a; }
+
+        .emergency-hero {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 60%, #450a0a 100%);
+            padding: 5rem 0 4rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .emergency-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, rgba(255,255,255,0.06) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .emer-icon {
+            font-size: 4.5rem;
+            animation: emergencyPulse 1.5s ease-in-out infinite;
+            display: block;
+            margin-bottom: 1.25rem;
+        }
+
+        @keyframes emergencyPulse {
+            0%, 100% { transform: scale(1); }
+            50%       { transform: scale(1.1); }
+        }
+
+        .emer-title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 900;
+            color: white;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.75rem;
+        }
+
+        .emer-desc {
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.75);
+            max-width: 560px;
+            margin: 0 auto 2rem;
+            line-height: 1.65;
+        }
+
+        .call-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 1.1rem 2.5rem;
+            background: white;
+            color: #dc2626;
+            border: 3px solid white;
+            border-radius: 12px;
+            font-family: 'Poppins','Inter',sans-serif;
+            font-size: 1.1rem;
+            font-weight: 900;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+            animation: callPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes callPulse {
+            0%, 100% { box-shadow: 0 8px 24px rgba(0,0,0,0.25), 0 0 0 0 rgba(255,255,255,0.4); }
+            50%       { box-shadow: 0 8px 24px rgba(0,0,0,0.25), 0 0 0 16px rgba(255,255,255,0); }
+        }
+
+        .call-btn:hover {
+            background: #dc2626;
+            color: white;
+            border-color: white;
+            transform: translateY(-3px) scale(1.03);
+        }
+
+        .emergency-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.5rem;
+            padding: 4rem 0;
+        }
+
+        .emer-card {
+            background: white;
+            border: 1px solid #fecaca;
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(220,38,38,0.08);
+            transition: all 0.25s ease;
+        }
+
+        [data-theme="dark"] .emer-card { background: #1e293b; border-color: #7f1d1d; }
+
+        .emer-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(220,38,38,0.15); }
+
+        .emer-card-icon { font-size: 2.5rem; margin-bottom: 1rem; display: block; }
+        .emer-card h3   { font-size: 1.1rem; font-weight: 800; color: #1e293b; margin-bottom: 0.5rem; }
+        [data-theme="dark"] .emer-card h3 { color: #f1f5f9; }
+        .emer-card p    { font-size: 0.875rem; color: #64748b; margin-bottom: 1.25rem; line-height: 1.55; }
+
+        .emer-action-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0.7rem 1.25rem;
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Poppins','Inter',sans-serif;
+            font-size: 0.875rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .emer-action-btn:hover { background: #b91c1c; color: white; transform: translateY(-1px); }
+
+        @media (max-width: 768px) {
+            .emergency-hero { padding: 3.5rem 0 3rem; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <header>
+        <nav class="navbar" id="main-navbar" role="navigation">
+            <div class="nav-container">
+                <a href="index.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath
+                </a>
+                <ul class="nav-menu" id="nav-menu">
+                    <li><a href="index.html"       class="nav-item" data-page="index">Home</a></li>
+                    <li><a href="doctors.html"     class="nav-item" data-page="doctors">Find Doctor</a></li>
+                    <li><a href="appointments.html" class="nav-item" data-page="appointments">Appointments</a></li>
+                    <li><a href="ai-assistant.html" class="nav-item" data-page="ai-assistant">AI Assistant</a></li>
+                    <li><a href="contact.html"     class="nav-item" data-page="contact">Contact</a></li>
+                </ul>
+                <div class="nav-auth" id="nav-auth"></div>
+                <div class="nav-right">
+                    <button id="dark-mode-toggle" title="Toggle Dark Mode" aria-label="Toggle">🌙</button>
+                    <button class="hamburger" id="hamburger" aria-label="Menu">
+                        <span></span><span></span><span></span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- EMERGENCY HERO -->
+    <section class="emergency-hero">
+        <div class="container" style="position:relative; z-index:1;">
+            <span class="emer-icon">🚨</span>
+            <h1 class="emer-title">Emergency Medical Help</h1>
+            <p class="emer-desc">
+                If you are experiencing a life-threatening emergency, call 911 immediately. Do not wait — every second counts.
+            </p>
+            <a href="tel:911" class="call-btn" aria-label="Call 911 emergency services">
+                📞 CALL 911 NOW
+            </a>
+        </div>
+    </section>
+
+    <!-- EMERGENCY SERVICES GRID -->
+    <div class="container">
+        <div class="emergency-grid">
+            <div class="emer-card">
+                <span class="emer-card-icon">🏥</span>
+                <h3>Find Nearest ER</h3>
+                <p>Locate the nearest emergency room or urgent care center using your current location.</p>
+                <a href="contact.html" class="emer-action-btn">📍 Find ER Near Me</a>
+            </div>
+            <div class="emer-card">
+                <span class="emer-card-icon">👨‍⚕️</span>
+                <h3>Emergency Specialist</h3>
+                <p>Connect with an on-call emergency specialist who can provide immediate guidance.</p>
+                <a href="doctors.html" class="emer-action-btn">🩺 Call Specialist</a>
+            </div>
+            <div class="emer-card">
+                <span class="emer-card-icon">🔍</span>
+                <h3>Symptom Check</h3>
+                <p>Quickly assess your symptoms with our AI to understand the urgency of your situation.</p>
+                <a href="ai-assistant.html" class="emer-action-btn">🤖 Check Symptoms</a>
+            </div>
+            <div class="emer-card">
+                <span class="emer-card-icon">📞</span>
+                <h3>Contact Care Team</h3>
+                <p>Reach our 24/7 healthcare support team for immediate non-emergency assistance.</p>
+                <a href="contact.html" class="emer-action-btn">💬 Contact Now</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="disclaimer" style="margin-top:auto;">
+        ⚠️ In a life-threatening emergency, ALWAYS call 911 or your local emergency number immediately.
+    </footer>
+
+    <script src="/script.js"></script>
+</body>
+</html>

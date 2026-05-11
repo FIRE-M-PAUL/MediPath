@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Doctor Registration - Join MediPath healthcare network.">
+    <title>Doctor Registration - MediPath</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body style="background-color: var(--bg-color);">
+
+    <!-- ===== NAVBAR ===== -->
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="/index.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath
+                </a>
+                <div class="nav-auth">
+                    <a href="/doctor-login.html" class="btn btn-outline btn-sm">Doctor Login</a>
+                    <a href="/login.html" class="btn btn-primary btn-sm">Patient Login</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mt-3 mb-3">
+        <div class="form-container" style="max-width: 800px; margin: 0 auto; border-top: 5px solid var(--primary-color);">
+            <div class="mb-3">
+                <a href="/index.html" style="text-decoration: none; color: var(--text-light); font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                    ← Back to Home
+                </a>
+            </div>
+            <div class="text-center mb-2">
+                <span class="section-badge">Join our Network</span>
+                <h2 class="section-title">Doctor Registration</h2>
+                <p class="text-light">Apply to join the MediPath specialist directory</p>
+            </div>
+
+            <form id="doctor-register-form" novalidate>
+                <div class="grid-2" style="gap: 1.5rem;">
+                    <div class="form-group">
+                        <label for="fullname">Full Name</label>
+                        <input type="text" id="fullname" class="form-control" required placeholder="Dr. Ruth">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" class="form-control" required placeholder="ruth@medipath.com">
+                    </div>
+                </div>
+
+                <div class="grid-2 mt-1" style="gap: 1.5rem;">
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" id="phone" class="form-control" required placeholder="09xxxxxxxx"
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '')" pattern="\d*">
+                    </div>
+                    <div class="form-group">
+                        <label for="license">Medical License Number</label>
+                        <input type="text" id="license" class="form-control" required placeholder="LIC-12345-MED">
+                    </div>
+                </div>
+
+                <div class="grid-2 mt-1" style="gap: 1.5rem;">
+                    <div class="form-group">
+                        <label for="specialty">Specialty</label>
+                        <select id="specialty" class="form-control" required>
+                            <option value="" disabled selected>Select Specialty</option>
+                            <option value="General Doctor">General Doctor</option>
+                            <option value="Cardiologist">Cardiologist</option>
+                            <option value="Pediatrician">Pediatrician</option>
+                            <option value="Dermatologist">Dermatologist</option>
+                            <option value="Surgeon">Surgeon</option>
+                            <option value="Dentist">Dentist</option>
+                            <option value="Gynecologist">Gynecologist</option>
+                            <option value="Neurologist">Neurologist</option>
+                            <option value="Other">Other (Not Listed)</option>
+                        </select>
+                        <input
+                            type="text"
+                            id="custom-specialty"
+                            class="form-control mt-1"
+                            placeholder="Type your specialty field"
+                            style="display: none;"
+                            maxlength="100"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="experience">Years of Experience</label>
+                        <input type="number" id="experience" class="form-control" required min="0" placeholder="e.g. 10">
+                    </div>
+                </div>
+
+                <div class="form-group mt-1">
+                    <label for="hospital">Hospital / Clinic Name</label>
+                    <input type="text" id="hospital" class="form-control" required placeholder="e.g. City General Hospital">
+                </div>
+
+                <div class="form-group mt-1">
+                    <label for="qualification">Upload Qualification Document (PDF/JPG/PNG)</label>
+                    <input type="file" id="qualification" class="form-control" accept=".pdf,.jpg,.png" required>
+                </div>
+
+                <div class="grid-2 mt-1" style="gap: 1.5rem;">
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <div style="position: relative;">
+                            <input type="password" id="password" class="form-control" required minlength="8" style="padding-right: 2.75rem;">
+                            <button type="button" class="password-toggle" data-target="password" aria-label="Show password" title="Show password"
+                                style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); border: none; background: transparent; cursor: pointer; color: var(--text-light); font-size: 1rem; line-height: 1;">
+                                👁
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-password">Confirm Password</label>
+                        <div style="position: relative;">
+                            <input type="password" id="confirm-password" class="form-control" required style="padding-right: 2.75rem;">
+                            <button type="button" class="password-toggle" data-target="confirm-password" aria-label="Show password" title="Show password"
+                                style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); border: none; background: transparent; cursor: pointer; color: var(--text-light); font-size: 1rem; line-height: 1;">
+                                👁
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mt-2">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; border-radius: var(--radius-sm); padding: 1rem;">
+                        Submit Application
+                    </button>
+                </div>
+
+                <p class="text-center mt-2 text-light" style="font-size: 0.9rem;">
+                    Already have an account? <a href="/doctor-login.html" style="font-weight: 600;">Doctor Login</a>
+                </p>
+            </form>
+        </div>
+    </main>
+
+    <!-- Success Modal -->
+    <div id="reg-success-modal" style="display: none; position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 1rem;">
+        <div class="card" style="max-width: 500px; text-align: center; padding: 3rem 2rem; border-top: 5px solid var(--success-color);">
+            <div style="width: 70px; height: 70px; background: var(--success-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 2.5rem;">✓</div>
+            <h2 style="margin-bottom: 0.5rem; font-weight: 800;">Application Received</h2>
+            <p style="color: var(--text-light); margin-bottom: 2rem; line-height: 1.6;">
+                Your professional registration has been successfully submitted to the **MediPath Medical Board**.<br><br>
+                Our administrators will verify your medical license and credentials. You will be notified once your specialized portal is activated.
+            </p>
+            <a href="/doctor-pending.html" class="btn btn-primary" style="width: 100%; margin-bottom: 0.75rem;">Check Application Status</a>
+            <a href="/index.html" class="btn btn-outline" style="width: 100%;">Return to Home</a>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+    <script>
+        const registerForm = document.getElementById('doctor-register-form');
+        const specialtySelect = document.getElementById('specialty');
+        const customSpecialtyInput = document.getElementById('custom-specialty');
+
+        if (specialtySelect && customSpecialtyInput) {
+            specialtySelect.addEventListener('change', () => {
+                const isOther = specialtySelect.value === 'Other';
+                customSpecialtyInput.style.display = isOther ? 'block' : 'none';
+                customSpecialtyInput.required = isOther;
+                if (!isOther) customSpecialtyInput.value = '';
+            });
+        }
+
+        document.querySelectorAll('.password-toggle').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                if (!input) return;
+                const show = input.type === 'password';
+                input.type = show ? 'text' : 'password';
+                btn.textContent = show ? '🙈' : '👁';
+                btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+                btn.setAttribute('title', show ? 'Hide password' : 'Show password');
+            });
+        });
+
+        if (registerForm) {
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const name        = document.getElementById('fullname').value.trim();
+                const email       = document.getElementById('email').value.trim();
+                const phone       = document.getElementById('phone').value.trim();
+                const license     = document.getElementById('license').value.trim();
+                const specialtyChoice = document.getElementById('specialty').value;
+                const customSpecialty = customSpecialtyInput ? customSpecialtyInput.value.trim() : '';
+                const specialty = specialtyChoice === 'Other' ? customSpecialty : specialtyChoice;
+                const experience  = document.getElementById('experience').value;
+                const hospital    = document.getElementById('hospital').value.trim();
+                const p1          = document.getElementById('password').value;
+                const p2          = document.getElementById('confirm-password').value;
+                const qualFile    = document.getElementById('qualification').files[0];
+
+                // Validation
+                const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                if (!emailRegex.test(email)) { showToast('Please enter a valid email address.', 'error'); return; }
+                if (p1 !== p2)               { showToast('Passwords do not match!', 'error'); return; }
+                if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(p1)) {
+                    showToast('Password must be at least 8 characters and include uppercase, lowercase, and a number.', 'error');
+                    return;
+                }
+                if (!specialtyChoice)        { showToast('Please select your specialty.', 'error'); return; }
+                if (specialtyChoice === 'Other' && customSpecialty.length < 3) {
+                    showToast('Please type your specialty field (at least 3 characters).', 'error');
+                    return;
+                }
+                if (!license)                { showToast('Medical License Number is required.', 'error'); return; }
+
+                // Build FormData so the file is included in the upload
+                const formData = new FormData();
+                formData.append('name',       name);
+                formData.append('email',      email);
+                formData.append('phone',      phone);
+                formData.append('license',    license);
+                formData.append('specialty',  specialty);
+                formData.append('experience', experience);
+                formData.append('hospital',   hospital);
+                formData.append('password',   p1);
+                formData.append('role',       'doctor');
+                if (qualFile) formData.append('qualification', qualFile);
+
+                try {
+                    const btn = registerForm.querySelector('button[type="submit"]');
+                    btn.disabled = true;
+                    btn.textContent = 'Submitting…';
+                    const csrfToken = await API.getCsrfToken();
+
+                    const res  = await fetch('http://127.0.0.1:5005/api/auth/register', {
+                        method: 'POST',
+                        headers: csrfToken ? { 'X-CSRFToken': csrfToken } : {},
+                        body: formData
+                        // No Content-Type header — browser sets it with boundary automatically
+                    });
+                    const result = await res.json();
+
+                    btn.disabled = false;
+                    btn.textContent = 'Submit Application';
+
+                    if (result.success) {
+                        document.getElementById('reg-success-modal').style.display = 'flex';
+                    } else {
+                        showToast(result.message || 'Registration failed.', 'error');
+                    }
+                } catch (err) {
+                    showToast('Network error. Please try again.', 'error');
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

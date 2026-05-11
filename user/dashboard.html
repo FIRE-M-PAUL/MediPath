@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MediPath Patient Dashboard — Manage your health, appointments, and specialists.">
+    <title>Patient Dashboard - MediPath</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        /* ============================================================
+           DASHBOARD PAGE STYLES
+           ============================================================ */
+
+        body {
+            background-color: #f0f4ff;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        [data-theme="dark"] body { background-color: #07101f; }
+
+        /* ── Notification Banner ─────────────────────────────────── */
+        .notif-banner {
+            background: linear-gradient(90deg, #2563eb, #0ea5e9);
+            color: white;
+            padding: 0.65rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .notif-banner .notif-text {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .notif-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            line-height: 1;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+            flex-shrink: 0;
+        }
+
+        .notif-close:hover { opacity: 1; }
+
+        .notif-banner.notif-banner-hidden {
+            display: none !important;
+        }
+
+        /* ── Main Content area ───────────────────────────────────── */
+        .dash-main {
+            flex: 1;
+            padding: 2.5rem 0;
+        }
+
+        /* ── Welcome Banner ──────────────────────────────────────── */
+        .welcome-banner {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 45%, #1e1b4b 100%);
+            border-radius: 20px;
+            padding: 2.5rem 3rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+        }
+
+        .welcome-banner::before {
+            content: '';
+            position: absolute;
+            width: 350px; height: 350px;
+            background: radial-gradient(circle, rgba(255,255,255,0.07) 0%, transparent 70%);
+            top: -80px; right: -60px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .welcome-banner::after {
+            content: '';
+            position: absolute;
+            width: 200px; height: 200px;
+            background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+            bottom: -60px; left: 60px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .welcome-left { position: relative; z-index: 1; }
+
+        .welcome-greeting {
+            font-size: 0.825rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.65);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 0.375rem;
+        }
+
+        .welcome-name {
+            font-size: clamp(1.5rem, 3vw, 2.1rem);
+            font-weight: 800;
+            color: white;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome-sub {
+            font-size: 0.875rem;
+            color: rgba(255,255,255,0.65);
+            margin-bottom: 1.5rem;
+        }
+
+        .welcome-date-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 0.45rem 1rem;
+            border-radius: 99px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .welcome-right {
+            position: relative;
+            z-index: 1;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .welcome-health-score {
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 16px;
+            padding: 1.25rem 1.5rem;
+            text-align: center;
+            min-width: 130px;
+        }
+
+        .score-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 0.25rem;
+        }
+
+        .score-number {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #34d399;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            margin-bottom: 0.25rem;
+        }
+
+        .score-sub {
+            font-size: 0.72rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* ── Stats Row ───────────────────────────────────────────── */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem 1.75rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+            transition: all 0.28s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        [data-theme="dark"] .stat-card { background: #1e293b; border-color: #334155; }
+
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            border-radius: 3px 3px 0 0;
+        }
+
+        .stat-blue::before   { background: linear-gradient(90deg, #2563eb, #0ea5e9); }
+        .stat-green::before  { background: linear-gradient(90deg, #10b981, #34d399); }
+        .stat-red::before    { background: linear-gradient(90deg, #ef4444, #f97316); }
+        .stat-purple::before { background: linear-gradient(90deg, #8b5cf6, #6366f1); }
+
+        .stat-icon-wrap {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-blue   .stat-icon-wrap { background: #dbeafe; }
+        .stat-green  .stat-icon-wrap { background: #d1fae5; }
+        .stat-red    .stat-icon-wrap { background: #fee2e2; }
+        .stat-purple .stat-icon-wrap { background: #ede9fe; }
+
+        [data-theme="dark"] .stat-blue   .stat-icon-wrap { background: rgba(37,99,235,0.2); }
+        [data-theme="dark"] .stat-green  .stat-icon-wrap { background: rgba(16,185,129,0.2); }
+        [data-theme="dark"] .stat-red    .stat-icon-wrap { background: rgba(239,68,68,0.2); }
+        [data-theme="dark"] .stat-purple .stat-icon-wrap { background: rgba(139,92,246,0.2); }
+
+        .stat-num {
+            font-size: 2.25rem;
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            margin-bottom: 0.25rem;
+            color: #1e293b;
+        }
+
+        [data-theme="dark"] .stat-num { color: #f1f5f9; }
+
+        .stat-blue   .stat-num { color: #2563eb; }
+        .stat-green  .stat-num { color: #10b981; }
+        .stat-red    .stat-num { color: #ef4444; }
+        .stat-purple .stat-num { color: #8b5cf6; }
+
+        .stat-title {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 0;
+        }
+
+        /* ── Two-Column Body ─────────────────────────────────────── */
+        .dash-body {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 1.75rem;
+            align-items: start;
+        }
+
+        /* ── Quick Actions Grid ──────────────────────────────────── */
+        .section-label {
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+            margin-bottom: 1rem;
+        }
+
+        .section-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.125rem;
+        }
+
+        .section-view-all {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .section-view-all:hover { text-decoration: underline; }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .action-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 1.5rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-decoration: none;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        [data-theme="dark"] .action-card { background: #1e293b; border-color: #334155; }
+
+        .action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+            border-color: #2563eb;
+        }
+
+        .action-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(37,99,235,0.04), transparent);
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+
+        .action-card:hover::after { opacity: 1; }
+
+        .action-icon-wrap {
+            width: 54px; height: 54px;
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem;
+            transition: transform 0.25s ease;
+        }
+
+        .action-card:hover .action-icon-wrap { transform: scale(1.12) rotate(-4deg); }
+
+        .ac-blue   .action-icon-wrap { background: #dbeafe; }
+        .ac-green  .action-icon-wrap { background: #d1fae5; }
+        .ac-purple .action-icon-wrap { background: #ede9fe; }
+        .ac-red    .action-icon-wrap { background: #fee2e2; }
+        .ac-yellow .action-icon-wrap { background: #fef3c7; }
+        .ac-gray   .action-icon-wrap { background: #f1f5f9; }
+
+        [data-theme="dark"] .ac-blue   .action-icon-wrap { background: rgba(37,99,235,0.2); }
+        [data-theme="dark"] .ac-green  .action-icon-wrap { background: rgba(16,185,129,0.2); }
+        [data-theme="dark"] .ac-purple .action-icon-wrap { background: rgba(139,92,246,0.2); }
+        [data-theme="dark"] .ac-red    .action-icon-wrap { background: rgba(239,68,68,0.2); }
+        [data-theme="dark"] .ac-yellow .action-icon-wrap { background: rgba(245,158,11,0.2); }
+        [data-theme="dark"] .ac-gray   .action-icon-wrap { background: rgba(100,116,139,0.2); }
+
+        .action-label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #1e293b;
+            letter-spacing: -0.01em;
+        }
+
+        [data-theme="dark"] .action-label { color: #f1f5f9; }
+
+        .ac-red .action-label  { color: #ef4444; }
+        .ac-gray .action-label { color: #64748b; }
+
+        /* ── Appointments Table Card ──────────────────────────────── */
+        .dash-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        [data-theme="dark"] .dash-card { background: #1e293b; border-color: #334155; }
+
+        .dash-card-header {
+            padding: 1.25rem 1.75rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        [data-theme="dark"] .dash-card-header { border-color: #334155; }
+
+        .dash-card-header h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1e293b;
+            letter-spacing: -0.02em;
+            margin-bottom: 0;
+        }
+
+        [data-theme="dark"] .dash-card-header h3 { color: #f1f5f9; }
+
+        .dash-card-body { padding: 1.5rem 1.75rem; }
+
+        /* Appointment rows */
+        .appt-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.875rem 0;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.2s;
+        }
+
+        [data-theme="dark"] .appt-row { border-color: #334155; }
+
+        .appt-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .appt-row:first-child { padding-top: 0; }
+
+        .appt-avatar {
+            width: 42px; height: 42px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.25rem;
+            background: #dbeafe;
+            flex-shrink: 0;
+        }
+
+        .appt-info { flex: 1; }
+
+        .appt-name {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.125rem;
+        }
+
+        [data-theme="dark"] .appt-name { color: #f1f5f9; }
+
+        .appt-time {
+            font-size: 0.78rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .appt-badge {
+            padding: 0.3rem 0.75rem;
+            border-radius: 99px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            flex-shrink: 0;
+        }
+
+        .badge-pending  { background: #fef3c7; color: #d97706; }
+        .badge-approved { background: #d1fae5; color: #059669; }
+        .badge-done     { background: #f1f5f9; color: #64748b; }
+
+        [data-theme="dark"] .badge-pending  { background: rgba(245,158,11,0.2); color: #fbbf24; }
+        [data-theme="dark"] .badge-approved { background: rgba(16,185,129,0.2);  color: #34d399; }
+        [data-theme="dark"] .badge-done     { background: rgba(100,116,139,0.2); color: #94a3b8; }
+
+        /* ── Activity Feed ───────────────────────────────────────── */
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .activity-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid #f1f5f9;
+            position: relative;
+        }
+
+        [data-theme="dark"] .activity-item { border-color: #334155; }
+
+        .activity-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .activity-item:first-child { padding-top: 0; }
+
+        .activity-dot {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .dot-blue   { background: #dbeafe; }
+        .dot-green  { background: #d1fae5; }
+        .dot-yellow { background: #fef3c7; }
+        .dot-red    { background: #fee2e2; }
+
+        [data-theme="dark"] .dot-blue   { background: rgba(37,99,235,0.2); }
+        [data-theme="dark"] .dot-green  { background: rgba(16,185,129,0.2); }
+        [data-theme="dark"] .dot-yellow { background: rgba(245,158,11,0.2); }
+        [data-theme="dark"] .dot-red    { background: rgba(239,68,68,0.2); }
+
+        .activity-text {
+            font-size: 0.855rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.125rem;
+        }
+
+        [data-theme="dark"] .activity-text { color: #f1f5f9; }
+
+        .activity-time {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        /* ── Right Column: Profile + Doctors ─────────────────────── */
+        .profile-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            padding: 2rem 1.75rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+        }
+
+        [data-theme="dark"] .profile-card { background: #1e293b; border-color: #334155; }
+
+        .profile-avatar {
+            width: 72px; height: 72px;
+            background: linear-gradient(135deg, #2563eb, #0ea5e9);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem;
+            margin: 0 auto 1rem;
+            box-shadow: 0 6px 16px rgba(37,99,235,0.3);
+        }
+
+        .profile-name {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #1e293b;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.25rem;
+        }
+
+        [data-theme="dark"] .profile-name { color: #f1f5f9; }
+
+        .profile-email {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 1.25rem;
+        }
+
+        .profile-stat-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .profile-stat-box {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 0.75rem;
+        }
+
+        [data-theme="dark"] .profile-stat-box { background: #0f172a; }
+
+        .profile-stat-num {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #2563eb;
+            letter-spacing: -0.04em;
+        }
+
+        .profile-stat-lbl {
+            font-size: 0.72rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .btn-profile {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Poppins','Inter',sans-serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            transition: all 0.25s;
+            margin-bottom: 0.625rem;
+        }
+
+        .btn-profile:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(37,99,235,0.3); color: white; }
+
+        .btn-logout {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #ef4444;
+            background: #fee2e2;
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem;
+            cursor: pointer;
+            width: 100%;
+            font-family: 'Poppins','Inter',sans-serif;
+            transition: all 0.25s;
+        }
+
+        .btn-logout:hover { background: #ef4444; color: white; transform: translateY(-1px); }
+
+        /* ── Doctors Sidebar ─────────────────────────────────────── */
+        .doctor-mini {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            padding: 0.875rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        [data-theme="dark"] .doctor-mini { border-color: #334155; }
+
+        .doctor-mini:last-child { border-bottom: none; padding-bottom: 0; }
+        .doctor-mini:first-child { padding-top: 0; }
+
+        .doc-avatar {
+            width: 44px; height: 44px;
+            background: #dbeafe;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .doc-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.125rem;
+        }
+
+        [data-theme="dark"] .doc-name { color: #f1f5f9; }
+
+        .doc-spec {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .doc-avail {
+            margin-left: auto;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.3rem 0.6rem;
+            border-radius: 99px;
+            flex-shrink: 0;
+        }
+
+        .avail-yes { background: #d1fae5; color: #059669; }
+        .avail-no  { background: #f1f5f9; color: #64748b; }
+
+        /* ── Footer ──────────────────────────────────────────────── */
+        .dash-footer {
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            padding: 1.25rem 0;
+        }
+
+        [data-theme="dark"] .dash-footer { background: #1e293b; border-color: #334155; }
+
+        .dash-footer-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .dash-footer-inner p {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 0;
+        }
+
+        .dash-footer-links {
+            display: flex;
+            gap: 1.25rem;
+        }
+
+        .dash-footer-links a {
+            font-size: 0.8rem;
+            color: #64748b;
+            font-weight: 600;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .dash-footer-links a:hover { color: #2563eb; }
+
+        /* ── Empty State ─────────────────────────────────────────── */
+        .empty-state {
+            padding: 2rem 1rem;
+            text-align: center;
+            color: #94a3b8;
+        }
+
+        .empty-state span { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+        .empty-state p    { font-size: 0.875rem; font-weight: 500; margin-bottom: 1rem; color: #94a3b8; }
+
+        /* ── Responsive ──────────────────────────────────────────── */
+        @media (max-width: 1200px) {
+            .stats-row { grid-template-columns: repeat(2,1fr); }
+            .dash-body { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 992px) {
+            .dash-body  { grid-template-columns: 1fr; }
+            .stats-row  { grid-template-columns: repeat(2,1fr); }
+            .actions-grid { grid-template-columns: repeat(3,1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .welcome-banner { flex-direction: column; align-items: flex-start; padding: 2rem; }
+            .welcome-right  { display: none; }
+            .stats-row      { grid-template-columns: repeat(2,1fr); }
+            .actions-grid   { grid-template-columns: repeat(2,1fr); }
+        }
+
+        @media (max-width: 480px) {
+            .stats-row    { grid-template-columns: 1fr 1fr; }
+            .actions-grid { grid-template-columns: repeat(2,1fr); }
+            .dash-main    { padding: 1.5rem 0; }
+            .welcome-banner { padding: 1.5rem; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ===================================================
+         NOTIFICATION BANNER
+         =================================================== -->
+    <div class="notif-banner notif-banner-hidden" id="notif-banner" aria-live="polite">
+        <div class="notif-text" id="notif-banner-text"></div>
+        <button type="button" class="notif-close" onclick="dismissNotif()" aria-label="Dismiss notification">✕</button>
+    </div>
+
+    <!-- ===================================================
+         NAVBAR — PRIVATE USER NAVIGATION
+         =================================================== -->
+    <header>
+        <nav class="navbar" id="main-navbar" role="navigation" aria-label="User navigation">
+            <div class="nav-container">
+                <a href="dashboard.html" class="logo" aria-label="MediPath Dashboard">
+                    <span class="logo-cross">+</span> MediPath
+                </a>
+
+                <ul class="nav-menu" id="nav-menu">
+                    <li><a href="dashboard.html"    class="nav-item" data-page="dashboard">🏠 Home</a></li>
+                    <li><a href="doctors.html"      class="nav-item" data-page="doctors">Find Doctor</a></li>
+                    <li><a href="appointments.html" class="nav-item" data-page="appointments">Appointments</a></li>
+                    <li><a href="ai-assistant.html" class="nav-item" data-page="ai-assistant">AI Assistant</a></li>
+                    <li><a href="emergency.html"    class="nav-item emergency-link" data-page="emergency">🚨 Emergency</a></li>
+                    <li><a href="contact.html"      class="nav-item" data-page="contact">Contact</a></li>
+                </ul>
+
+                <div class="nav-auth" id="nav-auth">
+                    <!-- Dynamically filled by script.js -->
+                </div>
+
+                <div class="nav-right">
+                    <button id="dark-mode-toggle" title="Toggle Dark Mode" aria-label="Toggle dark mode">🌙</button>
+                    <button class="hamburger" id="hamburger" aria-label="Toggle mobile menu" aria-expanded="false">
+                        <span></span><span></span><span></span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- ===================================================
+         MAIN DASHBOARD CONTENT
+         =================================================== -->
+    <main class="dash-main">
+        <div class="container">
+
+            <!-- ── Welcome Banner ─────────────────────────── -->
+            <div class="welcome-banner">
+                <div class="welcome-left">
+                    <p class="welcome-greeting" id="greeting-text">Good morning</p>
+                    <h1 class="welcome-name">Welcome back, <span id="user-first-name">User</span> 👋</h1>
+                    <p class="welcome-sub">Your healthcare services are ready. Stay healthy today!</p>
+                    <div class="welcome-date-badge">
+                        📅 <span id="current-date">Loading...</span>
+                    </div>
+                </div>
+                <div class="welcome-right">
+                    <div class="welcome-health-score">
+                        <p class="score-label">Health Score</p>
+                        <p class="score-number">87</p>
+                        <p class="score-sub">Good condition</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Stats Row ───────────────────────────────── -->
+            <div class="stats-row">
+                <div class="stat-card stat-blue" style="cursor:pointer;" onclick="window.location.href='appointments.html'" title="Open appointments">
+                    <div class="stat-icon-wrap">📅</div>
+                    <div class="stat-num" id="dash-total-appts">0</div>
+                    <div class="stat-title">Total Appointments</div>
+                </div>
+                <div class="stat-card stat-green" style="cursor:pointer;" onclick="window.location.href='doctors.html'" title="Open doctors">
+                    <div class="stat-icon-wrap">👨‍⚕️</div>
+                    <div class="stat-num" id="dash-available-doctors">0</div>
+                    <div class="stat-title">Available Doctors</div>
+                </div>
+                <div class="stat-card stat-purple" style="cursor:pointer;" onclick="window.location.href='user/messages.html'">
+                    <div class="stat-icon-wrap">💬</div>
+                    <div class="stat-num" id="dash-messages">0</div>
+                    <div class="stat-title">New Messages</div>
+                </div>
+                <div class="stat-card stat-red" style="cursor:pointer;" onclick="window.location.href='user/alerts.html'" title="Open alerts">
+                    <div class="stat-icon-wrap">🚨</div>
+                    <div class="stat-num" id="dash-alerts">0</div>
+                    <div class="stat-title">Alerts</div>
+                </div>
+            </div>
+
+            <!-- ── Quick Actions ───────────────────────────── -->
+            <p class="section-label">⚡ Quick Actions</p>
+            <div class="actions-grid">
+                <a href="ai-assistant.html" class="action-card ac-blue" id="act-symptoms">
+                    <div class="action-icon-wrap">🔍</div>
+                    <span class="action-label">Check Symptoms</span>
+                </a>
+                <a href="doctors.html" class="action-card ac-green" id="act-doctor">
+                    <div class="action-icon-wrap">👨‍⚕️</div>
+                    <span class="action-label">Find Doctor</span>
+                </a>
+                <a href="appointments.html" class="action-card ac-purple" id="act-book">
+                    <div class="action-icon-wrap">📅</div>
+                    <span class="action-label">Book Appointment</span>
+                </a>
+                <a href="user/messages.html" class="action-card ac-yellow" id="act-messages">
+                    <div class="action-icon-wrap">💬</div>
+                    <span class="action-label">Messages</span>
+                </a>
+                <a href="emergency.html" class="action-card ac-red" id="act-emergency">
+                    <div class="action-icon-wrap">🚨</div>
+                    <span class="action-label">Emergency Help</span>
+                </a>
+                <a href="#" class="action-card ac-gray" id="act-profile" onclick="showProfile(event)">
+                    <div class="action-icon-wrap">👤</div>
+                    <span class="action-label">View Profile</span>
+                </a>
+                <button class="action-card ac-blue" id="act-logout" onclick="logout()" style="border:none; font-family: inherit;">
+                    <div class="action-icon-wrap">🚪</div>
+                    <span class="action-label">Logout</span>
+                </button>
+            </div>
+
+            <!-- ── Two-Column Body ─────────────────────────── -->
+            <div class="dash-body">
+
+                <!-- LEFT COLUMN -->
+                <div class="dash-left">
+
+                    <!-- Recent Appointments -->
+                    <div class="dash-card">
+                        <div class="dash-card-header">
+                            <h3>📋 My Appointments</h3>
+                            <a href="appointments.html" class="section-view-all">Book New +</a>
+                        </div>
+                        <div class="dash-card-body" id="appointments-container">
+                            <div class="empty-state">
+                                <span>📅</span>
+                                <p>No appointments yet. Book your first consultation!</p>
+                                <a href="appointments.html" class="btn btn-primary btn-sm">Book Appointment</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="dash-card">
+                        <div class="dash-card-header">
+                            <h3>🕐 Recent Activity</h3>
+                            <span style="font-size:0.78rem; color:#94a3b8; font-weight:600;">Last 7 days</span>
+                        </div>
+                        <div class="dash-card-body">
+                            <div class="activity-list" id="activity-list">
+                                <div class="empty-state">
+                                    <span>🕐</span>
+                                    <p>Loading recent activity...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- RIGHT COLUMN -->
+                <div class="dash-right">
+
+                    <!-- Profile Card -->
+                    <div class="profile-card">
+                        <div class="profile-avatar">👤</div>
+                        <p class="profile-name" id="profile-full-name">Loading...</p>
+                        <p class="profile-email" id="profile-email">—</p>
+                        <div class="profile-stat-row">
+                            <div class="profile-stat-box">
+                                <div class="profile-stat-num" id="profile-appts">0</div>
+                                <div class="profile-stat-lbl">Appointments</div>
+                            </div>
+                            <div class="profile-stat-box">
+                                <div class="profile-stat-num" id="profile-doctors-count">0</div>
+                                <div class="profile-stat-lbl">Available Doctors</div>
+                            </div>
+                        </div>
+                        <a href="appointments.html" class="btn-profile">📅 New Appointment</a>
+                        <button class="btn-logout" onclick="logout()">🚪 Logout</button>
+                    </div>
+
+                    <!-- Available Doctors -->
+                    <div class="dash-card">
+                        <div class="dash-card-header">
+                            <h3>👨‍⚕️ Available Doctors</h3>
+                            <a href="doctors.html" class="section-view-all">View All →</a>
+                        </div>
+                        <div class="dash-card-body" id="available-doctors-list">
+                            <div class="empty-state">
+                                <span>👨‍⚕️</span>
+                                <p>Loading available doctors...</p>
+                            </div>
+                            <div style="margin-top:1.25rem;">
+                                <a href="doctors.html" class="btn btn-outline btn-sm" style="width:100%; display:flex; justify-content:center;">
+                                    Find More Doctors →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Emergency Card -->
+                    <div class="dash-card" style="border-color: #fecaca;">
+                        <div class="dash-card-body" style="padding: 1.5rem;">
+                            <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.875rem;">
+                                <span style="font-size:1.75rem;">🚨</span>
+                                <div>
+                                    <p style="font-weight:800; font-size:0.95rem; color:#ef4444; margin-bottom:0.125rem;">Emergency Service</p>
+                                    <p style="font-size:0.78rem; color:#64748b; margin-bottom:0;">24/7 Critical Care Available</p>
+                                </div>
+                            </div>
+                            <a href="emergency.html" class="btn btn-accent btn-sm" style="width:100%; display:flex; justify-content:center;">
+                                🆘 Get Emergency Help
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- ===================================================
+         FOOTER
+         =================================================== -->
+    <footer class="dash-footer">
+        <div class="container">
+            <div class="dash-footer-inner">
+                <p>© 2026 <strong style="color:#2563eb;">MediPath</strong> — Smart Healthcare Navigation System</p>
+                <div class="dash-footer-links">
+                    <a href="index.html">Home</a>
+                    <a href="contact.html">Contact</a>
+                    <a href="ai-assistant.html">AI Assistant</a>
+                    <a href="#" onclick="logout(); return false;">Logout</a>
+                </div>
+            </div>
+            <p style="font-size:0.75rem; color:#94a3b8; margin-top:0.5rem; margin-bottom:0;">
+                ⚠️ MediPath serves as a healthcare navigator. Always seek professional emergency services for life-threatening conditions.
+            </p>
+        </div>
+    </footer>
+
+    <script src="/script.js"></script>
+    <script>
+    // ============================================================
+    // DASHBOARD PAGE — Logic & Initialization
+    // ============================================================
+    (function () {
+        'use strict';
+
+        // ── 1. Require Authentication ────────────────────────────
+        const user = (typeof Auth !== 'undefined') ? Auth.getUser() : getSessionUser();
+        if (!user) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        // ── 2. Greeting by Time of Day ───────────────────────────
+        function getGreeting() {
+            const h = new Date().getHours();
+            if (h < 12) return '☀️ Good morning';
+            if (h < 17) return '🌤️ Good afternoon';
+            return '🌙 Good evening';
+        }
+
+        document.getElementById('greeting-text').textContent = getGreeting();
+        document.getElementById('user-first-name').textContent = user.name.split(' ')[0];
+
+        // ── 3. Current Date ──────────────────────────────────────
+        const now      = new Date();
+        const dateOpts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').textContent = now.toLocaleDateString('en-US', dateOpts);
+
+        // ── 4. Profile Card ──────────────────────────────────────
+        document.getElementById('profile-full-name').textContent = user.name;
+        document.getElementById('profile-email').textContent     = user.email || '—';
+
+        // ── 5. Load Appointments ─────────────────────────────────
+        let userAppts = [];
+        const container = document.getElementById('appointments-container');
+        API.getAppointments().then((rows) => {
+            userAppts = Array.isArray(rows) ? rows : [];
+            document.getElementById('dash-total-appts').textContent = userAppts.length;
+            document.getElementById('profile-appts').textContent = userAppts.length;
+            if (userAppts.length === 0) return;
+            container.innerHTML = userAppts.slice(0, 4).map(a => `
+                <div class="appt-row">
+                    <div class="appt-avatar">👨‍⚕️</div>
+                    <div class="appt-info">
+                        <p class="appt-name">${a.doctorName}</p>
+                        <p class="appt-time">${formatDateDash(a.dateTime)}</p>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem;">
+                        <span class="appt-badge ${getBadgeClass(a.status)}">${a.status}</span>
+                        ${['Confirmed', 'Approved', 'Completed'].includes(String(a.status || '').trim()) ? `
+                            <button
+                                onclick="openDoctorMessagesFromEl(this)"
+                                data-doctor-id="${Number(a.doctorId) || 0}"
+                                data-doctor-name="${encodeURIComponent(String(a.doctorName || 'Doctor'))}"
+                                style="background: none; border: none; color: #2563eb; font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 0;"
+                            >Message</button>
+                        ` : ''}
+                        ${a.status === 'Pending' || a.status === 'Approved' ? `
+                            <button onclick="cancelUserAppt(${a.id})" style="background: none; border: none; color: #ef4444; font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 0;">Cancel</button>
+                        ` : ''}
+                        ${a.status === 'Cancelled' && a.cancellationReason ? `
+                            <div style="font-size: 0.65rem; color: #64748b; width: 120px; text-align: right;">Reason: ${a.cancellationReason}</div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        });
+
+        // ── 5.2 Live Dashboard Metrics (no mock/static data) ─────
+        API.getDoctors().then((rows) => {
+            const doctors = Array.isArray(rows) ? rows : [];
+            const doctorsCount = doctors.length;
+            const statDoctorsEl = document.getElementById('dash-available-doctors');
+            const profileDoctorsEl = document.getElementById('profile-doctors-count');
+            if (statDoctorsEl) statDoctorsEl.textContent = doctorsCount;
+            if (profileDoctorsEl) profileDoctorsEl.textContent = doctorsCount;
+
+            const listEl = document.getElementById('available-doctors-list');
+            if (!listEl) return;
+
+            if (!doctors.length) {
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <span>👨‍⚕️</span>
+                        <p>No doctors available right now.</p>
+                    </div>
+                    <div style="margin-top:1.25rem;">
+                        <a href="doctors.html" class="btn btn-outline btn-sm" style="width:100%; display:flex; justify-content:center;">
+                            Find More Doctors →
+                        </a>
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = doctors.slice(0, 3).map((d) => `
+                <div class="doctor-mini">
+                    <div class="doc-avatar">👨‍⚕️</div>
+                    <div>
+                        <p class="doc-name">${d.name || 'Doctor'}</p>
+                        <p class="doc-spec">${d.specialty || 'General Doctor'}</p>
+                    </div>
+                    <span class="doc-avail ${(String(d.availability || '').toLowerCase().includes('limited') ? 'avail-no' : 'avail-yes')}">● ${d.availability || 'Available'}</span>
+                </div>
+            `).join('') + `
+                <div style="margin-top:1.25rem;">
+                    <a href="doctors.html" class="btn btn-outline btn-sm" style="width:100%; display:flex; justify-content:center;">
+                        Find More Doctors →
+                    </a>
+                </div>
+            `;
+        });
+
+        Promise.all([
+            API.getNotifications(),
+            API.getMessageConversations()
+        ]).then(async ([notesRes, convRes]) => {
+            const notes = Array.isArray(notesRes) ? notesRes : [];
+            const alerts = notes.filter((n) => String(n.status || '').toLowerCase() !== 'read');
+            const alertsEl = document.getElementById('dash-alerts');
+            if (alertsEl) alertsEl.textContent = String(alerts.length);
+
+            const threads = (convRes && convRes.success && Array.isArray(convRes.items)) ? convRes.items : [];
+            if (!threads.length) {
+                const msgEl = document.getElementById('dash-messages');
+                if (msgEl) msgEl.textContent = '0';
+                return;
+            }
+
+            const userId = Number((user && user.id) || 0);
+            const threadData = await Promise.all(threads.map((t) => API.getMessageThread(t.id)));
+            let incoming = 0;
+            threadData.forEach((res) => {
+                const items = (res && res.success && Array.isArray(res.items)) ? res.items : [];
+                incoming += items.filter((m) => Number(m.sender_id) !== userId).length;
+            });
+            const msgEl = document.getElementById('dash-messages');
+            if (msgEl) msgEl.textContent = String(incoming);
+        });
+
+        // ── 5.1 Cancellation Logic ────────────────────────────────
+        window.cancelUserAppt = async function(id) {
+            const reason = prompt("Please provide a reason for cancellation:");
+            if (reason === null) return;
+            
+            const finalReason = reason.trim() || 'Patient requested cancellation.';
+            const result = await API.request(`/appointments/${id}/cancel`, 'POST', { reason: finalReason });
+            if (!result || result.success === false) {
+                showToast(result?.message || 'Unable to cancel appointment.', 'error');
+                return;
+            }
+            showToast('Appointment cancelled successfully.', 'success');
+            location.reload();
+        };
+
+        window.openDoctorMessagesFromEl = function(el) {
+            const id = Number(el?.dataset?.doctorId || 0);
+            const doctorName = decodeURIComponent(el?.dataset?.doctorName || 'Doctor');
+            if (!Number.isInteger(id) || id <= 0) {
+                showToast('Doctor chat is unavailable for this appointment.', 'error');
+                return;
+            }
+            const params = new URLSearchParams({ doctor_id: String(id), doctor_name: String(doctorName || 'Doctor') });
+            window.location.href = `user/messages.html?${params.toString()}`;
+        };
+
+        // ── 6. Helpers ───────────────────────────────────────────
+        function formatDateDash(str) {
+            if (!str) return 'N/A';
+            const d = new Date(str);
+            return isNaN(d) ? str : d.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+        }
+
+        function getBadgeClass(status) {
+            if (!status) return '';
+            switch (status.toLowerCase()) {
+                case 'approved':  return 'badge-approved';
+                case 'pending':   return 'badge-pending';
+                default:          return 'badge-done';
+            }
+        }
+
+        // Fallback session read if Auth module not loaded
+        function getSessionUser() {
+            try { return JSON.parse(localStorage.getItem('mediPath_session')); }
+            catch (e) { return null; }
+        }
+
+    })();
+
+    // ── Notification banner dismiss ──────────────────────────
+    function dismissNotif() {
+        const banner = document.getElementById('notif-banner');
+        banner.style.height   = banner.offsetHeight + 'px';
+        banner.style.overflow = 'hidden';
+        banner.style.transition = 'height 0.3s ease, opacity 0.3s ease';
+        requestAnimationFrame(() => {
+            banner.style.height  = '0';
+            banner.style.opacity = '0';
+        });
+        setTimeout(() => banner.remove(), 350);
+    }
+
+    // ── Show Profile (placeholder) ───────────────────────────
+    function showProfile(e) {
+        e.preventDefault();
+        const user = (typeof Auth !== 'undefined') ? Auth.getUser()
+            : JSON.parse(localStorage.getItem('mediPath_session') || 'null');
+        if (!user) return;
+        alert(`👤 Profile\n\nName: ${user.name}\nEmail: ${user.email}\nPhone: ${user.phone || 'N/A'}`);
+    }
+    </script>
+
+</body>
+</html>

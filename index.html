@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="MediPath - Smart Healthcare Navigation System. Describe your symptoms, find the right specialist, and get healthcare guidance instantly.">
+    <title>MediPath - Smart Healthcare Navigation System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <!-- ===== HEADER / NAVBAR ===== -->
+    <header>
+        <nav class="navbar" id="main-navbar" role="navigation" aria-label="Main navigation">
+            <div class="nav-container">
+                <a href="index.html" class="logo" aria-label="MediPath Home">
+                    <span class="logo-cross">+</span> MediPath
+                </a>
+
+                <!-- Landing: no main nav links (logo + auth only). Logged-in users get menu items from script.js -->
+                <ul class="nav-menu" id="nav-menu" aria-label="Main navigation"></ul>
+
+                <div class="nav-auth" id="nav-auth">
+                    <a href="login.html" class="btn btn-outline btn-sm">Login</a>
+                    <a href="register.html" class="btn btn-primary btn-sm">Register</a>
+                </div>
+
+                <div class="nav-right">
+                    <button id="dark-mode-toggle" title="Toggle Dark Mode" aria-label="Toggle dark mode">🌙</button>
+                    <button class="hamburger" id="hamburger" aria-label="Toggle mobile menu" aria-expanded="false">
+                        <span></span><span></span><span></span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- ===== HERO SECTION ===== -->
+    <section class="hero" id="hero">
+        <div class="hero-particles">
+            <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+            <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+        </div>
+        <div class="container hero-content">
+            <div class="hero-badge animate-fadeInUp">🏥 Healthcare Navigation System</div>
+            <h1 class="hero-title animate-fadeInUp delay-1">MediPath</h1>
+            <p class="hero-subtitle animate-fadeInUp delay-2">Smart Healthcare Navigation System</p>
+            <p class="hero-description animate-fadeInUp delay-2">
+                Describe your symptoms, find the right specialist, and get healthcare guidance instantly.
+            </p>
+            <div class="hero-buttons animate-fadeInUp delay-3">
+                <a href="login.html" class="btn btn-primary btn-lg" id="get-started-btn">
+                    🚀 Get Started
+                </a>
+                <a href="doctors.html" class="btn btn-outline btn-lg" id="find-doctor-btn">
+                    👨‍⚕️ Find Doctor
+                </a>
+                <a href="appointments.html" class="btn btn-accent btn-lg" id="book-appointment-btn">
+                    📅 Book Appointment
+                </a>
+            </div>
+            <div class="hero-stats animate-fadeInUp delay-4">
+                <div class="stat-item">
+                    <span class="stat-number">500+</span>
+                    <span class="stat-label">Verified Doctors</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-number">10K+</span>
+                    <span class="stat-label">Patients Served</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-number">24/7</span>
+                    <span class="stat-label">Emergency Support</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero-scroll-indicator">
+            <span>Scroll to explore</span>
+            <div class="scroll-arrow">↓</div>
+        </div>
+    </section>
+
+    <!-- ===== PARTNER SECTION (NEW) ===== -->
+    <section class="partner-section" style="padding: 5rem 0; background: var(--surface-2);">
+        <div class="container" style="display: flex; align-items: center; justify-content: space-between; gap: 3rem; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 300px;">
+                <span class="section-badge">For Clinicians</span>
+                <h2 class="section-title">Partner with MediPath</h2>
+                <p class="section-subtitle">Join thousands of healthcare providers. Manage your practice, communicate with patients, and grow your clinical presence.</p>
+                <ul style="list-style: none; margin: 1.5rem 0;">
+                    <li style="margin-bottom: 0.5rem;">✅ Verified Professional Profile</li>
+                    <li style="margin-bottom: 0.5rem;">✅ Direct Patient Scheduling</li>
+                    <li style="margin-bottom: 0.5rem;">✅ Secure Message Consultations</li>
+                </ul>
+                <div style="display: flex; gap: 1rem;">
+                    <a href="doctor-register.html" class="btn btn-primary">Apply as Doctor</a>
+                    <a href="doctor-login.html" class="btn btn-outline">Doctor Portal</a>
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 300px; background: var(--surface-color); padding: 2rem; border-radius: var(--radius); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg);">
+                 <div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: var(--primary-color);">Doctor Dashboard Insight</div>
+                 <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                     <div style="height: 10px; width: 40%; background: var(--primary-light); border-radius: 5px;"></div>
+                     <div style="height: 40px; width: 100%; border: 1px dashed var(--border-color); border-radius: 5px; display: flex; align-items: center; padding: 0 1rem; font-size: 0.8rem; color: var(--text-light);">📅 Next Patient: John Doe (10:00 AM)</div>
+                     <div style="height: 40px; width: 100%; border: 1px dashed var(--border-color); border-radius: 5px; display: flex; align-items: center; padding: 0 1rem; font-size: 0.8rem; color: var(--text-light);">💬 3 New Message Notifications</div>
+                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== FEATURES SECTION ===== -->
+    <section id="services" class="features-section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge">Our Services</span>
+                <h2 class="section-title">Everything You Need for Better Healthcare</h2>
+                <p class="section-subtitle">Comprehensive healthcare tools designed to connect patients with the right
+                    medical professionals at the right time.</p>
+            </div>
+
+            <div class="features-grid">
+                <!-- Card 1 -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper blue-icon">
+                        <span class="feature-icon">🔍</span>
+                    </div>
+                    <h3 class="feature-title">Symptom Checker</h3>
+                    <p class="feature-desc">Enter your symptoms and get AI-powered analysis to understand potential
+                        conditions and recommended specialists.</p>
+                    <a href="ai-assistant.html" class="feature-link">Try Now →</a>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper green-icon">
+                        <span class="feature-icon">👨‍⚕️</span>
+                    </div>
+                    <h3 class="feature-title">Doctor Matching</h3>
+                    <p class="feature-desc">Get matched with the most suitable specialist based on your symptoms,
+                        location, and medical needs.</p>
+                    <a href="doctors.html" class="feature-link">Find a Doctor →</a>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="feature-card emergency-feature-card">
+                    <div class="feature-icon-wrapper red-icon">
+                        <span class="feature-icon">🚨</span>
+                    </div>
+                    <h3 class="feature-title">Emergency Detection</h3>
+                    <p class="feature-desc">Our system automatically detects critical symptoms and escalates to
+                        emergency services when life-threatening conditions are identified.</p>
+                    <a href="#emergency" class="feature-link red-link">Get Help Now →</a>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper purple-icon">
+                        <span class="feature-icon">📅</span>
+                    </div>
+                    <h3 class="feature-title">Appointment Booking</h3>
+                    <p class="feature-desc">Book appointments online with preferred doctors. Get reminders, manage
+                        reschedules, and view your full appointment history.</p>
+                    <a href="appointments.html" class="feature-link">Book Now →</a>
+                </div>
+
+                <!-- Card 5 -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper yellow-icon">
+                        <span class="feature-icon">💡</span>
+                    </div>
+                    <h3 class="feature-title">Health Tips</h3>
+                    <p class="feature-desc">Access daily health tips, wellness articles, and preventive care guides
+                        personalized to your unique health profile.</p>
+                    <a href="ai-assistant.html" class="feature-link">Explore Tips →</a>
+                </div>
+
+                <!-- Card 6 -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper teal-icon">
+                        <span class="feature-icon">📍</span>
+                    </div>
+                    <h3 class="feature-title">Facility Locator</h3>
+                    <p class="feature-desc">Find hospitals, clinics, pharmacies, and specialized care centers near your
+                        location with real-time availability.</p>
+                    <a href="contact.html" class="feature-link">Find Facility →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== CTA / EMERGENCY SECTION ===== -->
+    <section id="emergency" class="cta-section">
+        <div class="container">
+            <div class="cta-card">
+                <div class="cta-content">
+                    <span class="cta-badge">🤖 AI-Powered Assistant</span>
+                    <h2 class="cta-title">Need Medical Help?</h2>
+                    <p class="cta-desc">
+                        Use our intelligent symptom checker to get instant healthcare guidance. Our AI analyzes your
+                        symptoms and connects you with the right specialist — fast.
+                    </p>
+                    <div class="cta-buttons">
+                        <a href="ai-assistant.html" class="btn btn-white btn-lg" id="check-symptoms-btn">
+                            🔍 Check Symptoms
+                        </a>
+                        <a href="contact.html" class="btn btn-outline-white btn-lg">
+                            📞 Contact Care Team
+                        </a>
+                    </div>
+                </div>
+                <div class="cta-visual" aria-hidden="true">
+                    <div class="pulse-ring"></div>
+                    <div class="pulse-ring delay-ring-1"></div>
+                    <div class="pulse-ring delay-ring-2"></div>
+                    <div class="cta-sos-icon">🆘</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <!-- Brand -->
+                <div class="footer-brand">
+                    <a href="index.html" class="logo footer-logo">
+                        <span class="logo-cross">+</span> MediPath
+                    </a>
+                    <p class="footer-tagline">
+                        Smart Healthcare Navigation System. Connecting patients with the right care at the right time.
+                    </p>
+                    <div class="footer-social">
+                        <a href="#" aria-label="Facebook" class="social-link">📘</a>
+                        <a href="#" aria-label="Twitter" class="social-link">🐦</a>
+                        <a href="#" aria-label="LinkedIn" class="social-link">💼</a>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="footer-links">
+                    <h4 class="footer-heading">Quick Links</h4>
+                    <ul class="footer-nav">
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="doctors.html">Find Doctor</a></li>
+                        <li><a href="appointments.html">Appointments</a></li>
+                        <li><a href="ai-assistant.html">AI Assistant</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                    </ul>
+                </div>
+
+                <!-- Account Links -->
+                <div class="footer-links">
+                    <h4 class="footer-heading">Account & Portals</h4>
+                    <ul class="footer-nav">
+                        <li><a href="login.html">Patient Login</a></li>
+                        <li><a href="doctor-login.html">Doctor Portal</a></li>
+                        <li><a href="doctor-register.html">Become a Partner</a></li>
+                    </ul>
+                </div>
+
+                <!-- Contact Info -->
+                <div class="footer-contact">
+                    <h4 class="footer-heading">Contact Information</h4>
+                    <ul class="contact-info-list">
+                        <li>📍 123 Health Avenue, Medical District</li>
+                        <li>📞 +1 (555) 000-MEDI</li>
+                        <li>✉️ support@medipath.health</li>
+                        <li>🕐 24/7 Emergency Support Available</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p class="footer-disclaimer">
+                    ⚠️ MediPath serves as a healthcare navigator. Always seek professional emergency services for
+                    life-threatening conditions. Do not use this platform as a substitute for professional medical
+                    advice.
+                </p>
+                <p class="footer-copyright">© 2026 MediPath. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

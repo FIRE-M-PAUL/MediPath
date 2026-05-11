@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal - MediPath</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .admin-login-card {
+            max-width: 450px;
+            margin: 10vh auto;
+            border-top: 5px solid var(--primary-color);
+            padding: 3rem 2.5rem;
+            background: var(--surface-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .password-field-wrap {
+            position: relative;
+        }
+
+        .password-field-wrap .form-control {
+            padding-right: 2.75rem;
+        }
+
+        .toggle-password-btn {
+            position: absolute;
+            right: 0.6rem;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: #64748b;
+            font-size: 1rem;
+            padding: 0.2rem;
+            line-height: 1;
+        }
+
+        .toggle-password-btn:hover {
+            color: #334155;
+        }
+    </style>
+</head>
+<body style="background-color: #f1f5f9;">
+
+    <main class="container">
+        <div class="admin-login-card">
+            <div class="text-center mb-3">
+                <div style="font-size: 2.5rem; margin-bottom: 1rem;">🛡️</div>
+                <h1 style="font-size: 1.75rem; font-weight: 800; color: #1e293b; margin-bottom: 0.5rem;">MediPath Admin</h1>
+                <p style="color: #64748b; font-size: 0.95rem;">Command center authentication required.</p>
+            </div>
+
+            <form id="admin-login-form">
+                <div class="form-group mb-2">
+                    <label for="admin-email">Admin Email</label>
+                    <input type="email" id="admin-email" class="form-control" required placeholder="admin@medipath.health">
+                </div>
+                <div class="form-group mb-3">
+                    <label for="admin-password">Secure Password</label>
+                    <div class="password-field-wrap">
+                        <input type="password" id="admin-password" class="form-control" required placeholder="••••••••">
+                        <button type="button" id="toggle-admin-password" class="toggle-password-btn" aria-label="Show password" title="Show password">👁️</button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; border-radius: var(--radius-sm); font-weight: 700;">
+                    Authenticate & Enter
+                </button>
+            </form>
+            
+            <div class="text-center mt-3">
+                <a href="../index.html" style="color: #94a3b8; font-size: 0.85rem; text-decoration: none; font-weight: 600;">
+                    ← Return to Main Application
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script src="../script.js"></script>
+    <script>
+        const adminPasswordInput = document.getElementById('admin-password');
+        const toggleAdminPasswordBtn = document.getElementById('toggle-admin-password');
+
+        toggleAdminPasswordBtn.addEventListener('click', () => {
+            const isPassword = adminPasswordInput.type === 'password';
+            adminPasswordInput.type = isPassword ? 'text' : 'password';
+            toggleAdminPasswordBtn.textContent = isPassword ? '🙈' : '👁️';
+            toggleAdminPasswordBtn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+            toggleAdminPasswordBtn.title = isPassword ? 'Hide password' : 'Show password';
+        });
+
+        document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('admin-email').value.trim();
+            const pass  = document.getElementById('admin-password').value;
+            
+            // 1. Strict Validation
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailRegex.test(email)) {
+                showToast('Please enter a valid administrative email.', 'error');
+                return;
+            }
+
+            // 2. Async Auth via Flask
+            const result = await Auth.login(email, pass, 'admin');
+            
+            if (result.success) {
+                window.location.href = 'admin-dashboard.html';
+            } else {
+                showToast(result.message || 'Invalid administrative credentials.', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

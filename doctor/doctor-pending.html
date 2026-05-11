@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Status - MediPath</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .status-card {
+            max-width: 600px;
+            margin: 10vh auto;
+            text-align: center;
+            padding: 4rem 2rem;
+            border-top: 6px solid var(--primary-color);
+            background: var(--surface-color);
+            box-shadow: var(--shadow-xl);
+            border-radius: var(--radius-lg);
+        }
+        .pulse-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--primary-light);
+            color: var(--primary-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            font-size: 2.5rem;
+            animation: mp-pulse 2s infinite ease-in-out;
+        }
+        @keyframes mp-pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(79, 70, 229, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+        }
+    </style>
+</head>
+<body style="background-color: var(--bg-color);">
+
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="/index.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath
+                </a>
+                <button onclick="Auth.logout()" class="btn btn-outline btn-sm">Sign Out</button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="status-card">
+            <div class="pulse-icon">📂</div>
+            
+            <span class="section-badge" style="background: var(--primary-light); color: var(--primary-color);">Application Status</span>
+            <h1 style="font-weight: 800; font-size: 2rem; margin-top: 1rem;">Under Review</h1>
+            <p style="color: var(--text-light); font-size: 1.1rem; line-height: 1.6; margin-bottom: 2.5rem;">
+                Welcome, <strong id="doctor-name">Doctor</strong>. Your application is currently being verified by the **MediPath Medical Board**.<br><br>
+                For security and clinical integrity, we perform a manual check of your medical license and credentials. This typically takes **24–48 hours**.
+            </p>
+
+            <div style="background: #f8fafc; padding: 1.5rem; border-radius: var(--radius-md); text-align: left; margin-bottom: 2rem; border-left: 4px solid var(--primary-color);">
+                <h4 style="font-size: 0.9rem; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">What happens next?</h4>
+                <ul style="color: #64748b; font-size: 0.9rem; line-height: 1.5; padding-left: 1.25rem;">
+                    <li>Our team verifies your Medical License with the national board.</li>
+                    <li>We confirm your clinical affiliation with the listed hospital.</li>
+                    <li>Once approved, you will receive an email and your dashboard will be activated.</li>
+                </ul>
+            </div>
+
+            <p style="color: var(--text-light); font-size: 0.85rem; margin-bottom: 2rem;">
+                Need to update your application? Contact our board at **board@medipath.health**
+            </p>
+
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <a href="/index.html" class="btn btn-outline">Back to Home</a>
+                <button onclick="checkApprovedStatus()" class="btn btn-primary" id="check-status-btn">Check Status Now</button>
+            </div>
+        </div>
+    </main>
+
+    <script src="/script.js"></script>
+    <script>
+        async function checkApprovedStatus() {
+            const btn = document.getElementById('check-status-btn');
+            btn.textContent = 'Verifying...';
+            btn.disabled = true;
+
+            try {
+                const user = await Auth.refreshSession();
+                if (user && user.status === 'approved') {
+                    showToast('Congratulations! Your account has been activated.', 'success');
+                    setTimeout(() => window.location.href = 'doctor-dashboard.html', 1500);
+                } else {
+                    showToast('Application still under review. Please check back later.', 'info');
+                }
+            } catch (err) {
+                showToast('Failed to connect to verification server.', 'error');
+            } finally {
+                btn.textContent = 'Check Status Now';
+                btn.disabled = false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Initial check just in case it happened since last load
+            const user = await Auth.refreshSession();
+            if (user) {
+                document.getElementById('doctor-name').textContent = user.name;
+                if (user.role === 'doctor' && user.status === 'approved') {
+                    window.location.href = 'doctor-dashboard.html';
+                }
+            } else {
+                window.location.href = 'doctor-login.html';
+            }
+        });
+    </script>
+</body>
+</html>

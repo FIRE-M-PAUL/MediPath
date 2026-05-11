@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Doctor Login - Access your MediPath medical dashboard.">
+    <title>Doctor Login - MediPath</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body style="background-color: var(--bg-color);">
+
+    <!-- ===== NAVBAR ===== -->
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="/index.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath
+                </a>
+                <div class="nav-auth">
+                    <a href="/doctor-register.html" class="btn btn-outline btn-sm">Doctor Registration</a>
+                    <a href="/login.html" class="btn btn-primary btn-sm">Patient Login</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mt-3 mb-3">
+        <div class="form-container" style="max-width: 450px; margin: 5rem auto; border-top: 5px solid var(--primary-color);">
+            <div class="mb-3">
+                <a href="/index.html" style="text-decoration: none; color: var(--text-light); font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                    ← Back to Home
+                </a>
+            </div>
+            <div class="text-center mb-2">
+                <span class="section-badge">Physician Access</span>
+                <h2 class="section-title">Doctor Login</h2>
+                <p class="text-light">Enter your credentials to access your clinical dashboard</p>
+            </div>
+
+            <form id="doctor-login-form" novalidate>
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" class="form-control" required placeholder="ruth@medipath.com">
+                </div>
+                <div class="form-group mt-1">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" class="form-control" required>
+                </div>
+
+                <div class="form-group mt-2">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; border-radius: var(--radius-sm); padding: 1rem;">
+                        Login
+                    </button>
+                </div>
+
+                <p class="text-center mt-2 text-light" style="font-size: 0.9rem;">
+                    Don't have an account? <a href="/doctor-register.html" style="font-weight: 600;">Register as a Doctor</a>
+                </p>
+            </form>
+        </div>
+    </main>
+
+    <script src="/script.js"></script>
+    <script>
+        const loginForm = document.getElementById('doctor-login-form');
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('email').value.trim();
+                const pass  = document.getElementById('password').value;
+                
+                // 1. Strict Validation
+                const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                if (!emailRegex.test(email)) {
+                    showToast('Please enter a valid professional email.', 'error');
+                    return;
+                }
+
+                // 2. Async Auth via Flask
+                const result = await Auth.login(email, pass, 'doctor');
+                
+                if (result.success) {
+                    if (result.pending) {
+                        window.location.href = 'doctor-pending.html';
+                    } else {
+                        window.location.href = 'doctor-dashboard.html';
+                    }
+                } else {
+                    showToast(result.message || 'Invalid physician credentials.', 'error');
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

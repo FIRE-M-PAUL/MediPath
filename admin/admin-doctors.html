@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Physicians - MediPath Admin</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        /* ── Doctor Detail Modal ── */
+        .detail-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(6px);
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .detail-modal-overlay.open { display: flex; }
+
+        .detail-modal {
+            background: #fff;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 720px;
+            max-height: 92vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+            animation: modalSlideUp 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        @keyframes modalSlideUp {
+            from { opacity:0; transform:translateY(30px) scale(0.97); }
+            to   { opacity:1; transform:translateY(0) scale(1); }
+        }
+
+        .detail-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.75rem;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            background: #fff;
+            z-index: 10;
+            border-radius: 20px 20px 0 0;
+        }
+        .detail-modal-header h2 { font-size: 1.15rem; font-weight: 800; color: #0f172a; margin:0; }
+        .modal-close-btn {
+            width: 34px; height: 34px; border-radius: 50%;
+            border: none; background: #f1f5f9; cursor: pointer;
+            font-size: 1rem; display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        .modal-close-btn:hover { background: #e2e8f0; }
+
+        .detail-modal-body { padding: 1.5rem 1.75rem; flex: 1; }
+
+        /* Doctor Avatar strip */
+        .doctor-avatar-row {
+            display: flex; align-items: center; gap: 1.25rem;
+            background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+            border-radius: 14px; padding: 1.25rem; margin-bottom: 1.25rem;
+            border: 1px solid #dbeafe;
+        }
+        .doctor-avatar {
+            width: 64px; height: 64px; border-radius: 50%;
+            background: var(--primary-color); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.6rem; font-weight: 800; flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(37,99,235,0.3);
+        }
+        .doctor-avatar-info h3 { font-size: 1.2rem; font-weight: 800; margin: 0 0 0.2rem; }
+        .doctor-avatar-info p  { margin: 0.15rem 0 0; color: #64748b; font-size: 0.85rem; }
+
+        /* Section label */
+        .section-label {
+            font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.06em; color: #94a3b8; margin-bottom: 0.6rem;
+            display: flex; align-items: center; gap: 0.4rem;
+        }
+        .section-label::after { content:''; flex:1; height:1px; background:#e2e8f0; }
+
+        /* Info/edit grid */
+        .info-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+        @media(max-width:560px){ .info-grid { grid-template-columns:1fr; } }
+
+        .info-item {
+            background: #f8fafc; border-radius: 10px; padding: 0.85rem 1rem;
+            border: 1px solid #e2e8f0;
+        }
+        .info-item label {
+            display:block; font-size:0.68rem; font-weight:700;
+            text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8; margin-bottom:0.3rem;
+        }
+        .info-item span { font-weight:600; color:#1e293b; font-size:0.9rem; }
+
+        /* Editable inputs inside info-item */
+        .info-item input[type="text"],
+        .info-item input[type="number"],
+        .info-item select {
+            width: 100%; border: 1px solid #cbd5e1; border-radius: 8px;
+            padding: 0.4rem 0.65rem; font-size: 0.9rem; font-weight:600;
+            color: #1e293b; background:#fff; outline:none;
+            transition: border-color 0.2s;
+        }
+        .info-item input:focus, .info-item select:focus { border-color: var(--primary-color); }
+
+        /* Qualification section */
+        .qual-section { margin-bottom: 1.25rem; }
+        .qual-viewer {
+            border: 2px dashed #cbd5e1; border-radius: 12px;
+            padding: 1.25rem; text-align: center; background: #f8fafc;
+        }
+        .qual-viewer.has-doc { border-style: solid; border-color: #bfdbfe; background:#eff6ff; }
+        .qual-viewer iframe { width:100%; height:400px; border:none; border-radius:8px; }
+        .qual-viewer img    { max-width:100%; border-radius:8px; max-height:380px; object-fit:contain; }
+        .qual-open-link {
+            display:inline-flex; align-items:center; gap:0.4rem; margin-top:0.6rem;
+            color:var(--primary-color); font-weight:700; text-decoration:none;
+            font-size:0.85rem; padding:0.5rem 1.1rem;
+            background:#eff6ff; border-radius:8px; border:1px solid #bfdbfe;
+            transition:background 0.2s;
+        }
+        .qual-open-link:hover { background:#dbeafe; }
+
+        /* Upload area */
+        .upload-zone {
+            border: 2px dashed #94a3b8; border-radius: 12px;
+            padding: 1.25rem; text-align:center; cursor:pointer;
+            background:#f8fafc; transition: border-color 0.2s, background 0.2s;
+            margin-top: 0.75rem;
+        }
+        .upload-zone:hover { border-color:var(--primary-color); background:#eff6ff; }
+        .upload-zone input { display:none; }
+        .upload-zone p { margin:0.25rem 0 0; color:#64748b; font-size:0.8rem; }
+
+        /* Modal bottom actions */
+        .modal-actions {
+            display:flex; gap:0.75rem; flex-wrap:wrap;
+            padding: 1.25rem 1.75rem;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+            border-radius: 0 0 20px 20px;
+            position:sticky; bottom:0;
+        }
+        .modal-actions .btn { flex:1; min-width:110px; justify-content:center; }
+
+        /* Edit mode banner */
+        .edit-mode-banner {
+            display:none; margin-bottom:1rem;
+            background:#fffbeb; border:1px solid #fcd34d;
+            border-radius:10px; padding:0.75rem 1rem;
+            font-size:0.85rem; color:#92400e; font-weight:600;
+            display:none; align-items:center; gap:0.5rem;
+        }
+        .edit-mode-banner.active { display:flex !important; }
+
+        .badge { display:inline-block; padding:0.25rem 0.75rem; border-radius:999px; font-size:0.75rem; font-weight:700; }
+        .no-data { color:#94a3b8; font-style:italic; font-weight:500; }
+    </style>
+</head>
+<body style="background-color: #f8fafc;">
+
+    <!-- Admin Mobile Header -->
+    <header class="admin-mobile-header">
+        <div class="logo"><span class="logo-cross">+</span> MediPath</div>
+        <button class="hamburger-btn" onclick="toggleSidebar()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">☰</button>
+    </header>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="admin-dashboard.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath <span style="font-size:0.8rem;opacity:0.7;">Admin</span>
+                </a>
+            </div>
+            <p class="sidebar-label">Management</p>
+            <ul class="sidebar-menu">
+                <li><a href="admin-dashboard.html" class="sidebar-link">📊 System Overview</a></li>
+                <li><a href="admin-doctors.html"   class="sidebar-link active">👨‍⚕️ Verify Physicians</a></li>
+                <li><a href="admin-patients.html"  class="sidebar-link">👥 Manage Patients</a></li>
+                <li><a href="admin-appointments.html" class="sidebar-link">📅 All Appointments</a></li>
+                <li><a href="admin-admins.html"    class="sidebar-link">🛡️ Manage Team</a></li>
+                <li><a href="admin-reports.html"   class="sidebar-link">📈 Analytics Reports</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button onclick="logoutAdmin()" class="sidebar-link logout-link" style="width:100%;border:none;cursor:pointer;">🚪 Logout System</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="mb-3" style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <h1 style="font-weight:800;letter-spacing:-0.02em;">Physician Governance</h1>
+                    <p style="color:#64748b;">Review and manage medical board registrations.</p>
+                </div>
+            </header>
+
+            <div class="card mb-3" style="padding:1rem 1.25rem;">
+                <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.35rem;">Clinical doctor directory</h2>
+                <p style="color:#64748b;font-size:0.85rem;margin:0 0 1rem;line-height:1.45;">
+                    Live records from the clinical directory used for patient booking and doctor assignment.
+                </p>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Clinical ID</th>
+                                <th>Email (login)</th>
+                                <th>Specialty</th>
+                                <th>Linked portal user</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clinical-directory-tbody">
+                            <tr><td colspan="5" class="text-center py-3" style="color:#94a3b8;">Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="mb-3" style="display:flex;gap:2rem;border-bottom:2px solid var(--border-color);padding-bottom:0.5rem;">
+                <button onclick="switchTab('queue')" id="tab-queue" class="admin-tab"
+                    style="background:none;border:none;font-weight:700;color:var(--primary-color);cursor:pointer;font-size:0.95rem;">
+                    🕐 Verification Queue
+                </button>
+                <button onclick="switchTab('directory')" id="tab-directory" class="admin-tab"
+                    style="background:none;border:none;font-weight:700;color:#64748b;cursor:pointer;font-size:0.95rem;">
+                    ✅ Physician Directory
+                </button>
+            </div>
+
+            <div class="card" style="padding:0;overflow:hidden;">
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Doctor</th>
+                                <th>Specialty</th>
+                                <th>Hospital / Clinic</th>
+                                <th>Applied On</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-doctors-tbody">
+                            <tr><td colspan="6" class="text-center py-5" style="color:#94a3b8;">Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ════════════ DOCTOR DETAIL / EDIT MODAL ════════════ -->
+    <div id="doctor-detail-modal" class="detail-modal-overlay" onclick="backdropClose(event)">
+        <div class="detail-modal" id="detail-modal-inner">
+
+            <div class="detail-modal-header">
+                <h2 id="modal-title">👨‍⚕️ Physician Application Details</h2>
+                <button class="modal-close-btn" onclick="closeModal()">✕</button>
+            </div>
+
+            <div class="detail-modal-body" id="detail-modal-body">
+                <div class="text-center py-5" style="color:#64748b;">⏳ Loading…</div>
+            </div>
+
+            <div class="modal-actions" id="modal-actions"></div>
+        </div>
+    </div>
+
+    <script src="../script.js"></script>
+    <script src="admin.js"></script>
+    <script>
+        /* ─────────────────── State ─────────────────── */
+        let currentTab = 'queue';
+        let currentDoctor = null;   // full doctor object
+        let editMode = false;
+        let pendingFile = null;     // file chosen for upload
+
+        /* ─────────────────── Tab switching ─────────────────── */
+        async function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.admin-tab').forEach(t => t.style.color = '#64748b');
+            document.getElementById(`tab-${tab}`).style.color = 'var(--primary-color)';
+            await renderDoctorsTable();
+        }
+
+        function adminEsc(s) {
+            return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+        }
+
+        async function loadClinicalDirectory() {
+            const tbody = document.getElementById('clinical-directory-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-3" style="color:#94a3b8;">Loading…</td></tr>`;
+            const r = await API.getAdminClinicalDoctors();
+            const rows = Array.isArray(r) ? r : [];
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-3" style="color:#64748b;">No clinical doctors in database.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = rows.map(d => `
+                <tr>
+                    <td style="font-weight:700;">${adminEsc(d.name)}</td>
+                    <td>${d.clinical_doctor_id}</td>
+                    <td><code style="font-size:0.8rem;">${adminEsc(d.email)}</code></td>
+                    <td>${adminEsc(d.specialty) || '<span class="no-data">—</span>'}</td>
+                    <td>${d.linked_user_id ? 'User #' + d.linked_user_id : '<span class="no-data">—</span>'}</td>
+                </tr>`).join('');
+        }
+
+        /* ─────────────────── Render table ─────────────────── */
+        async function renderDoctorsTable() {
+            const tbody = document.getElementById('admin-doctors-tbody');
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5" style="color:#94a3b8;">Loading…</td></tr>`;
+            let docs = [];
+
+            if (currentTab === 'queue') {
+                const r = await API.getPendingDoctors();
+                docs = Array.isArray(r) ? r : (Array.isArray(r.data) ? r.data : []);
+            } else {
+                const r = await API.getAdminApprovedDoctors();
+                docs = Array.isArray(r) ? r : [];
+            }
+
+            if (!docs.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-5">
+                    <div style="font-size:3rem;opacity:0.3;margin-bottom:0.75rem;">📋</div>
+                    <p style="color:#64748b;font-weight:600;">No physicians in this section.</p>
+                </td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = docs.map(d => {
+                const dateStr = d.created_at
+                    ? new Date(d.created_at).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'})
+                    : 'N/A';
+                const viewBtn = `<button onclick="openModal(${d.id})" class="btn btn-primary btn-sm" style="white-space:nowrap;">🔍 View Details</button>`;
+                const revokeBtn = `<button onclick="rejectDoctor(${d.id})" class="btn btn-sm" style="color:#ef4444;border:1px solid #fecaca;white-space:nowrap;">Revoke</button>`;
+                const actions = d.status === 'pending_approval'
+                    ? viewBtn
+                    : `${viewBtn} ${revokeBtn}`;
+
+                return `<tr class="animate-fadeIn">
+                    <td>
+                        <div style="font-weight:700;">${d.name}</div>
+                        <div style="font-size:0.75rem;color:#64748b;">${d.email}</div>
+                    </td>
+                    <td>${d.specialty || '<span class="no-data">—</span>'}</td>
+                    <td>${d.hospital  || '<span class="no-data">—</span>'}</td>
+                    <td style="font-size:0.85rem;color:#64748b;">${dateStr}</td>
+                    <td>${getStatusBadge(d.status)}</td>
+                    <td><div style="display:flex;gap:0.5rem;flex-wrap:wrap;">${actions}</div></td>
+                </tr>`;
+            }).join('');
+        }
+
+        /* ─────────────────── Open modal ─────────────────── */
+        async function openModal(doctorId) {
+            editMode = false;
+            pendingFile = null;
+            document.getElementById('detail-modal-body').innerHTML =
+                `<div class="text-center py-5" style="color:#64748b;">⏳ Loading doctor details…</div>`;
+            document.getElementById('modal-actions').innerHTML = '';
+            document.getElementById('doctor-detail-modal').classList.add('open');
+            document.body.style.overflow = 'hidden';
+
+            const result = await API.getDoctorDetail(doctorId);
+            if (!result.success) {
+                document.getElementById('detail-modal-body').innerHTML =
+                    `<p class="text-center" style="color:#ef4444;">Failed to load. Please try again.</p>`;
+                return;
+            }
+            currentDoctor = result.doctor;
+            renderModalContent();
+        }
+
+        /* ─────────────────── Render modal content ─────────────────── */
+        function renderModalContent() {
+            const d = currentDoctor;
+            const initials = (d.name||'D').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+            const dateStr = d.created_at
+                ? new Date(d.created_at).toLocaleDateString('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})
+                : 'N/A';
+
+            /* Helper: show value or editable input */
+            function field(label, key, value, type='text', fullWidth=false) {
+                const displayVal = value || '<span class="no-data">Not provided</span>';
+                const inputHtml = editMode
+                    ? `<input type="${type}" id="edit-${key}" value="${value||''}" placeholder="Enter ${label.toLowerCase()}">`
+                    : `<span>${displayVal}</span>`;
+                return `<div class="info-item" ${fullWidth?'style="grid-column:span 2;"':''}>
+                    <label>${label}</label>
+                    ${inputHtml}
+                </div>`;
+            }
+
+            /* Qualification viewer */
+            let qualHtml = '';
+            if (d.qualification_path) {
+                const fileUrl = `http://127.0.0.1:5005/uploads/qualifications/${d.qualification_path}`;
+                const ext = d.qualification_path.split('.').pop().toLowerCase();
+                if (ext === 'pdf') {
+                    qualHtml = `<div class="qual-viewer has-doc">
+                        <iframe src="${fileUrl}" title="Qualification Document"></iframe>
+                        <a class="qual-open-link" href="${fileUrl}" target="_blank">⬇ Open in New Tab</a>
+                    </div>`;
+                } else {
+                    qualHtml = `<div class="qual-viewer has-doc">
+                        <img src="${fileUrl}" alt="Qualification Document">
+                        <br><a class="qual-open-link" href="${fileUrl}" target="_blank">⬇ Open Full Image</a>
+                    </div>`;
+                }
+            } else {
+                qualHtml = `<div class="qual-viewer">
+                    <div style="font-size:2.5rem;opacity:0.3;margin-bottom:0.5rem;">📄</div>
+                    <p style="color:#94a3b8;font-weight:600;margin:0;">No qualification document uploaded.</p>
+                </div>`;
+            }
+
+            /* Upload zone (always visible in edit mode; shown as note otherwise) */
+            const uploadZone = editMode ? `
+                <div class="upload-zone" onclick="document.getElementById('qual-upload').click()">
+                    <input type="file" id="qual-upload" accept=".pdf,.jpg,.jpeg,.png"
+                        onchange="handleFileSelect(event)">
+                    <div style="font-size:2rem;">📎</div>
+                    <p><strong id="upload-label">${d.qualification_path ? 'Replace document (PDF/JPG/PNG)' : 'Upload qualification document (PDF/JPG/PNG)'}</strong></p>
+                    <p>Click to browse</p>
+                </div>
+            ` : (d.qualification_path ? '' : `
+                <p style="margin-top:0.5rem;font-size:0.8rem;color:#f59e0b;font-weight:600;">
+                    ⚠ No document. Click <strong>Edit &amp; Update</strong> below to upload one.
+                </p>
+            `);
+
+            const rejectionHtml = d.rejection_reason ? `
+                <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:1rem;margin-bottom:1rem;">
+                    <label style="font-size:0.68rem;font-weight:700;text-transform:uppercase;color:#dc2626;letter-spacing:0.05em;">Rejection Reason</label>
+                    <p style="margin:0.25rem 0 0;color:#991b1b;font-weight:600;">${d.rejection_reason}</p>
+                </div>` : '';
+
+            const editBanner = `
+                <div class="edit-mode-banner ${editMode?'active':''}" id="edit-banner">
+                    ✏️ Edit mode — update any fields below then click <strong>Save Changes</strong>.
+                </div>`;
+
+            document.getElementById('detail-modal-body').innerHTML = `
+                ${editBanner}
+                ${rejectionHtml}
+
+                <!-- Avatar -->
+                <div class="doctor-avatar-row">
+                    <div class="doctor-avatar">${initials}</div>
+                    <div class="doctor-avatar-info">
+                        <h3>${d.name}</h3>
+                        <p>${d.specialty||'Specialty not set'} · ${d.hospital||'Hospital not set'}</p>
+                        <div style="margin-top:0.4rem;">${getStatusBadge(d.status)}</div>
+                    </div>
+                </div>
+
+                <!-- Contact & Profile info -->
+                <p class="section-label">Contact & Credentials</p>
+                <div class="info-grid">
+                    ${field('📧 Email Address', 'email', d.email)}
+                    ${field('📞 Phone Number', 'phone', d.phone)}
+                    ${field('🏥 Specialty', 'specialty', d.specialty)}
+                    ${field('🏨 Hospital / Clinic', 'hospital', d.hospital)}
+                    ${field('🪪 Medical License No.', 'license', d.license_number)}
+                    ${field('⏳ Years of Experience', 'experience', d.experience, 'number')}
+                    ${field('📅 Application Submitted', 'submitted', dateStr, 'text', true)}
+                </div>
+
+                <!-- Qualification -->
+                <p class="section-label">Qualification Document</p>
+                <div class="qual-section">
+                    ${qualHtml}
+                    ${uploadZone}
+                </div>
+            `;
+
+            /* Render action buttons */
+            renderActions();
+        }
+
+        function renderActions() {
+            const d = currentDoctor;
+            const actions = document.getElementById('modal-actions');
+
+            if (editMode) {
+                actions.innerHTML = `
+                    <button onclick="saveChanges()" class="btn btn-primary" style="background:#10b981;border-color:#10b981;">
+                        💾 Save Changes
+                    </button>
+                    <button onclick="cancelEdit()" class="btn btn-outline">Cancel Edit</button>
+                `;
+            } else if (d.status === 'pending_approval') {
+                actions.innerHTML = `
+                    <button onclick="approveDoctor(${d.id})" class="btn btn-primary" style="background:#10b981;border-color:#10b981;">
+                        ✅ Approve Physician
+                    </button>
+                    <button onclick="rejectDoctor(${d.id})" class="btn" style="background:#fef2f2;color:#ef4444;border:1px solid #fecaca;">
+                        ❌ Reject Application
+                    </button>
+                    <button onclick="enterEditMode()" class="btn btn-outline" style="border-color:#f59e0b;color:#d97706;">
+                        ✏️ Edit &amp; Update
+                    </button>
+                    <button onclick="closeModal()" class="btn btn-outline">Close</button>
+                `;
+            } else {
+                actions.innerHTML = `
+                    <button onclick="enterEditMode()" class="btn btn-outline" style="border-color:#f59e0b;color:#d97706;">
+                        ✏️ Edit &amp; Update
+                    </button>
+                    <button onclick="rejectDoctor(${d.id})" class="btn" style="background:#fef2f2;color:#ef4444;border:1px solid #fecaca;">
+                        🚫 Revoke Access
+                    </button>
+                    <button onclick="closeModal()" class="btn btn-outline">Close</button>
+                `;
+            }
+        }
+
+        /* ─────────────────── Edit mode ─────────────────── */
+        function enterEditMode() {
+            editMode = true;
+            renderModalContent();
+        }
+
+        function cancelEdit() {
+            editMode = false;
+            pendingFile = null;
+            renderModalContent();
+        }
+
+        function handleFileSelect(e) {
+            pendingFile = e.target.files[0];
+            if (pendingFile) {
+                document.getElementById('upload-label').textContent = `✅ Selected: ${pendingFile.name}`;
+            }
+        }
+
+        async function saveChanges() {
+            const d = currentDoctor;
+            const formData = new FormData();
+
+            const fields = {
+                phone:      document.getElementById('edit-phone')?.value?.trim(),
+                specialty:  document.getElementById('edit-specialty')?.value?.trim(),
+                hospital:   document.getElementById('edit-hospital')?.value?.trim(),
+                license:    document.getElementById('edit-license')?.value?.trim(),
+                experience: document.getElementById('edit-experience')?.value?.trim(),
+            };
+            Object.entries(fields).forEach(([k,v]) => { if(v) formData.append(k, v); });
+            if (pendingFile) formData.append('qualification', pendingFile);
+
+            const saveBtn = document.querySelector('#modal-actions .btn-primary');
+            if (saveBtn) { saveBtn.disabled=true; saveBtn.textContent='Saving…'; }
+
+            try {
+                const csrfToken = await API.getCsrfToken();
+                const res = await fetch(`http://127.0.0.1:5005/api/admin/update-doctor/${d.id}`, {
+                    method: 'POST',
+                    headers: csrfToken ? { 'X-CSRFToken': csrfToken } : {},
+                    body: formData
+                });
+                const result = await res.json();
+                if (result.success) {
+                    currentDoctor = result.doctor;
+                    editMode = false;
+                    pendingFile = null;
+                    renderModalContent();
+                    showToast('Profile updated successfully!', 'success');
+                    await renderDoctorsTable();
+                } else {
+                    showToast(result.message || 'Update failed.', 'error');
+                    if (saveBtn) { saveBtn.disabled=false; saveBtn.textContent='💾 Save Changes'; }
+                }
+            } catch(err) {
+                showToast('Network error. Please try again.', 'error');
+                if (saveBtn) { saveBtn.disabled=false; saveBtn.textContent='💾 Save Changes'; }
+            }
+        }
+
+        /* ─────────────────── Close modal ─────────────────── */
+        function closeModal() {
+            document.getElementById('doctor-detail-modal').classList.remove('open');
+            document.body.style.overflow = '';
+            currentDoctor = null;
+            editMode = false;
+            pendingFile = null;
+        }
+
+        function backdropClose(e) {
+            if (e.target === document.getElementById('doctor-detail-modal')) closeModal();
+        }
+
+        /* ─────────────────── Override approve/reject to refresh ─────────────────── */
+        const _origApprove = window.approveDoctor;
+        window.approveDoctor = async function(id) {
+            await _origApprove(id);
+            closeModal();
+            await renderDoctorsTable();
+        };
+        const _origReject = window.rejectDoctor;
+        window.rejectDoctor = async function(id) {
+            await _origReject(id);
+            closeModal();
+            await renderDoctorsTable();
+        };
+
+        /* ─────────────────── Boot ─────────────────── */
+        document.addEventListener('DOMContentLoaded', () => {
+            loadClinicalDirectory();
+            renderDoctorsTable();
+        });
+    </script>
+</body>
+</html>

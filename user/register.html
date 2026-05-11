@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Create your MediPath account — Smart Healthcare Navigation System.">
+    <title>Create Your MediPath Account</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        /* ── Page Layout ───────────────────────────────── */
+        body {
+            min-height: 100vh;
+            background-color: #f0f4ff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        [data-theme="dark"] body { background-color: #0a0f1e; }
+
+        .auth-page {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .auth-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1.4fr;
+            max-width: 1020px;
+            width: 100%;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.14);
+            animation: authFadeIn 0.55s ease both;
+        }
+
+        @keyframes authFadeIn {
+            from { opacity:0; transform: translateY(28px) scale(0.98); }
+            to   { opacity:1; transform: translateY(0)    scale(1); }
+        }
+
+        /* ── Left Brand Panel ──────────────────────────── */
+        .auth-brand {
+            background: linear-gradient(145deg, #1d4ed8 0%, #1e1b4b 100%);
+            padding: 3.5rem 2.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-brand::before {
+            content: '';
+            position: absolute;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+            top: -60px; right: -60px;
+            border-radius: 50%;
+        }
+
+        .auth-brand::after {
+            content: '';
+            position: absolute;
+            width: 180px; height: 180px;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+            bottom: -30px; left: -30px;
+            border-radius: 50%;
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: white;
+            letter-spacing: -0.04em;
+            text-decoration: none;
+            position: relative;
+            z-index: 1;
+        }
+
+        .brand-cross {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px; height: 30px;
+            background-color: rgba(255,255,255,0.2);
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: 900;
+        }
+
+        .brand-content { position: relative; z-index: 1; }
+
+        .brand-tagline {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: white;
+            line-height: 1.25;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.875rem;
+        }
+
+        .brand-desc {
+            font-size: 0.875rem;
+            color: rgba(255,255,255,0.65);
+            line-height: 1.6;
+            margin-bottom: 1.75rem;
+        }
+
+        .brand-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .brand-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.875rem;
+        }
+
+        .step-num {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px; height: 28px;
+            background-color: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .step-text h5 {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.125rem;
+        }
+
+        .step-text p {
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.55);
+            margin-bottom: 0;
+            line-height: 1.4;
+        }
+
+        .brand-footer {
+            position: relative;
+            z-index: 1;
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.4);
+        }
+
+        /* ── Right Form Panel ──────────────────────────── */
+        .auth-form-panel {
+            background-color: var(--surface-color, #fff);
+            padding: 3rem 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow-y: auto;
+        }
+
+        [data-theme="dark"] .auth-form-panel { background-color: #1e293b; }
+
+        .auth-form-header { margin-bottom: 1.75rem; }
+
+        .auth-form-header h1 {
+            font-size: 1.65rem;
+            font-weight: 800;
+            color: var(--text-color, #1e293b);
+            letter-spacing: -0.03em;
+            margin-bottom: 0.3rem;
+        }
+
+        .auth-form-header p {
+            font-size: 0.875rem;
+            color: var(--text-light, #64748b);
+            margin-bottom: 0;
+        }
+
+        /* ── Input Group ───────────────────────────────── */
+        .input-group {
+            margin-bottom: 1.125rem;
+            position: relative;
+        }
+
+        .input-group label {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            margin-bottom: 0.4rem;
+            font-size: 0.825rem;
+            font-weight: 600;
+            color: var(--text-color, #1e293b);
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 0.8rem 1rem 0.8rem 2.5rem;
+            font-family: 'Poppins', 'Inter', sans-serif;
+            font-size: 0.875rem;
+            border: 2px solid var(--border-color, #e2e8f0);
+            border-radius: 10px;
+            background-color: var(--bg-color, #f8fafc);
+            color: var(--text-color, #1e293b);
+            transition: all 0.25s ease;
+            outline: none;
+        }
+
+        [data-theme="dark"] .input-wrapper input {
+            border-color: #334155;
+            background-color: #0f172a;
+            color: #f1f5f9;
+        }
+
+        .input-wrapper input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+            background-color: #fff;
+        }
+
+        [data-theme="dark"] .input-wrapper input:focus { background-color: #1e293b; }
+
+        .input-wrapper input.input-error   { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.1); }
+        .input-wrapper input.input-success { border-color: #10b981; }
+
+        .input-icon {
+            position: absolute;
+            left: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.95rem;
+            pointer-events: none;
+            line-height: 1;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            color: var(--text-light, #64748b);
+            padding: 0;
+            line-height: 1;
+            transition: color 0.2s ease;
+        }
+
+        .password-toggle:hover { color: #2563eb; }
+
+        .error-msg {
+            display: none;
+            align-items: center;
+            gap: 0.3rem;
+            margin-top: 0.3rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #ef4444;
+        }
+
+        .error-msg.visible { display: flex; }
+
+        /* ── Form Grid ─────────────────────────────────── */
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0 1rem;
+        }
+
+        /* ── Password Strength ─────────────────────────── */
+        .password-strength {
+            margin-top: 0.4rem;
+        }
+
+        .strength-bar {
+            height: 4px;
+            background-color: var(--border-color, #e2e8f0);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.3rem;
+        }
+
+        .strength-fill {
+            height: 100%;
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.35s ease, background-color 0.35s ease;
+        }
+
+        .strength-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-muted, #94a3b8);
+        }
+
+        /* ── Submit ────────────────────────────────────── */
+        .btn-auth {
+            width: 100%;
+            padding: 0.875rem 1.5rem;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Poppins', 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1.25rem;
+            margin-bottom: 0.875rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-auth::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+        }
+
+        .btn-auth:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(37,99,235,0.35);
+        }
+
+        .btn-auth:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .login-link {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-light, #64748b);
+        }
+
+        .login-link a {
+            color: #2563eb;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .login-link a:hover { text-decoration: underline; }
+
+        @keyframes shakeForm {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+
+        .form-shake { animation: shakeForm 0.4s ease; }
+
+        /* ── Success Overlay ───────────────────────────── */
+        .success-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .success-overlay.show { display: flex; }
+
+        .success-card {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem 2.5rem;
+            text-align: center;
+            max-width: 380px;
+            width: 90%;
+            animation: authFadeIn 0.35s ease;
+        }
+
+        [data-theme="dark"] .success-card { background: #1e293b; }
+
+        .success-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        /* ── Responsive ────────────────────────────────── */
+        @media (max-width: 768px) {
+            .auth-wrapper    { grid-template-columns: 1fr; max-width: 520px; }
+            .auth-brand      { display: none; }
+            .auth-form-panel { padding: 2.5rem 2rem; }
+            .form-grid-2     { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            .auth-form-panel { padding: 2rem 1.5rem; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ─── Minimal Top Bar ─────────────────────────── -->
+    <nav style="background: white; border-bottom: 1px solid #e2e8f0; padding: 0.875rem 0; position: sticky; top:0; z-index:100; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
+        <div style="width:90%; max-width:1200px; margin:0 auto; display:flex; align-items:center; justify-content:space-between;">
+            <a href="index.html" style="display:flex; align-items:center; gap:0.375rem; font-size:1.4rem; font-weight:800; color:#2563eb; letter-spacing:-0.04em; text-decoration:none;">
+                <span style="width:28px;height:28px;background:#2563eb;color:white;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;font-size:1.1rem;font-weight:900;">+</span>
+                MediPath
+            </a>
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+                <a href="index.html" style="font-size:0.85rem; font-weight:600; color:#64748b; text-decoration:none;">← Home</a>
+                <a href="login.html" style="font-size:0.85rem; font-weight:700; color:#2563eb; text-decoration:none;">Sign In</a>
+                <button id="dark-mode-toggle" title="Toggle Dark Mode" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ─── Auth Page ────────────────────────────────── -->
+    <main class="auth-page">
+        <div class="auth-wrapper">
+
+            <!-- LEFT: Brand Panel -->
+            <div class="auth-brand">
+                <a href="index.html" class="brand-logo">
+                    <span class="brand-cross">+</span> MediPath
+                </a>
+
+                <div class="brand-content">
+                    <h2 class="brand-tagline">Start Your<br>Health Journey.</h2>
+                    <p class="brand-desc">Create your free account and get access to the full MediPath healthcare platform in seconds.</p>
+
+                    <div class="brand-steps">
+                        <div class="brand-step">
+                            <div class="step-num">1</div>
+                            <div class="step-text">
+                                <h5>Create your account</h5>
+                                <p>Fill in the form — takes under 60 seconds</p>
+                            </div>
+                        </div>
+                        <div class="brand-step">
+                            <div class="step-num">2</div>
+                            <div class="step-text">
+                                <h5>Find your specialist</h5>
+                                <p>Search our 500+ verified doctors directory</p>
+                            </div>
+                        </div>
+                        <div class="brand-step">
+                            <div class="step-num">3</div>
+                            <div class="step-text">
+                                <h5>Book your appointment</h5>
+                                <p>Instant confirmation & reminders</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="brand-footer">© 2026 MediPath. All rights reserved.</p>
+            </div>
+
+            <!-- RIGHT: Form Panel -->
+            <div class="auth-form-panel">
+                <div class="auth-form-header">
+                    <h1>Create Your Account ✨</h1>
+                    <p>Join thousands of patients already using MediPath.</p>
+                </div>
+
+                <form id="registerForm" novalidate autocomplete="on">
+                    <!-- Role Selection -->
+                    <div class="input-group">
+                        <label for="register-role">🧭 Register As</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">🧭</span>
+                            <select id="register-role" name="role" aria-label="Select registration role"
+                                style="width:100%; padding:0.8rem 1rem 0.8rem 2.5rem; font-family:'Poppins','Inter',sans-serif; font-size:0.875rem; border:2px solid var(--border-color,#e2e8f0); border-radius:10px; background-color:var(--bg-color,#f8fafc); color:var(--text-color,#1e293b); outline:none;">
+                                <option value="patient" selected>Patient</option>
+                                <option value="doctor">Doctor</option>
+                            </select>
+                        </div>
+                        <span style="display:block; margin-top:0.35rem; font-size:0.75rem; color:var(--text-light,#64748b);">
+                            Selecting Doctor takes you to the doctor's registration page.
+                        </span>
+                    </div>
+
+                    <!-- Full Name -->
+                    <div class="input-group">
+                        <label for="reg-name">👤 Full Name</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">👤</span>
+                            <input type="text" id="reg-name" name="fullname"
+                                placeholder="e.g. Ruth"
+                                autocomplete="name"
+                                aria-describedby="name-error"
+                                aria-required="true">
+                        </div>
+                        <span class="error-msg" id="name-error" role="alert">
+                            ❌ <span id="name-error-text">Please enter your full name</span>
+                        </span>
+                    </div>
+
+                    <!-- Email + Phone in grid -->
+                    <div class="form-grid-2">
+                        <div class="input-group">
+                            <label for="reg-email">📧 Email Address</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon">📧</span>
+                                <input type="email" id="reg-email" name="email"
+                                    placeholder="ruth@example.com"
+                                    autocomplete="email"
+                                    aria-describedby="reg-email-error"
+                                    aria-required="true">
+                            </div>
+                            <span class="error-msg" id="reg-email-error" role="alert">
+                                ❌ <span id="reg-email-error-text">Please enter a valid email</span>
+                            </span>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="reg-phone">📞 Phone Number</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon">📞</span>
+                                <input type="tel" id="reg-phone" name="phone"
+                                    placeholder="e.g. 0771234567"
+                                    autocomplete="tel"
+                                    aria-describedby="phone-error"
+                                    aria-required="true"
+                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')" pattern="\d*">
+                            </div>
+                            <span class="error-msg" id="phone-error" role="alert">
+                                ❌ <span id="phone-error-text">Phone must be at least 10 digits</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="input-group">
+                        <label for="reg-password">🔒 Password</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">🔒</span>
+                            <input type="password" id="reg-password" name="password"
+                                placeholder="At least 6 characters"
+                                autocomplete="new-password"
+                                aria-describedby="reg-pass-error"
+                                aria-required="true"
+                                style="padding-right: 3rem;">
+                            <button type="button" class="password-toggle" id="toggle-reg-password"
+                                title="Show/Hide password" aria-label="Toggle password visibility">👁</button>
+                        </div>
+                        <!-- Password Strength Indicator -->
+                        <div class="password-strength" id="strength-wrapper" style="display:none;">
+                            <div class="strength-bar">
+                                <div class="strength-fill" id="strength-fill"></div>
+                            </div>
+                            <span class="strength-label" id="strength-label">Weak</span>
+                        </div>
+                        <span class="error-msg" id="reg-pass-error" role="alert">
+                            ❌ <span id="reg-pass-error-text">Password must be at least 6 characters</span>
+                        </span>
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div class="input-group">
+                        <label for="reg-confirm">🔐 Confirm Password</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">🔐</span>
+                            <input type="password" id="reg-confirm" name="confirm-password"
+                                placeholder="Repeat your password"
+                                autocomplete="new-password"
+                                aria-describedby="confirm-error"
+                                aria-required="true"
+                                style="padding-right: 3rem;">
+                            <button type="button" class="password-toggle" id="toggle-confirm-password"
+                                title="Show/Hide password" aria-label="Toggle confirm password visibility">👁</button>
+                        </div>
+                        <span class="error-msg" id="confirm-error" role="alert">
+                            ❌ <span id="confirm-error-text">Passwords do not match</span>
+                        </span>
+                    </div>
+
+                    <!-- Submit -->
+                    <button type="submit" class="btn-auth" id="register-submit-btn">
+                        <span id="reg-btn-text">🚀 Create Account</span>
+                        <span id="reg-spinner" style="display:none;">⏳</span>
+                    </button>
+
+                    <p class="login-link">
+                        Already have an account? <a href="login.html">Sign in here →</a>
+                    </p>
+
+                </form>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- ─── Success Overlay ──────────────────────────── -->
+    <div class="success-overlay" id="success-overlay" role="dialog" aria-modal="true" aria-label="Registration successful">
+        <div class="success-card">
+            <span class="success-icon">🎉</span>
+            <h2 style="font-size:1.4rem; margin-bottom:0.5rem; color:#1e293b;">Registration Successful!</h2>
+            <p style="color:#64748b; font-size:0.9rem; margin-bottom:1.5rem;">
+                Your account has been created. Redirecting to login page...
+            </p>
+            <div style="width:100%; height:4px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                <div id="progress-bar" style="height:100%; background:linear-gradient(90deg,#10b981,#2563eb); width:0%; transition:width 1.8s linear; border-radius:4px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+    <script>
+    // ============================================================
+    // REGISTER PAGE — Validation & Submission
+    // ============================================================
+    (function () {
+        'use strict';
+
+        const form         = document.getElementById('registerForm');
+        const roleInput    = document.getElementById('register-role');
+        const nameInput    = document.getElementById('reg-name');
+        const emailInput   = document.getElementById('reg-email');
+        const phoneInput   = document.getElementById('reg-phone');
+        const passInput    = document.getElementById('reg-password');
+        const confirmInput = document.getElementById('reg-confirm');
+
+        roleInput.addEventListener('change', () => {
+            if (roleInput.value === 'doctor') {
+                window.location.href = 'doctor-register.html';
+            }
+        });
+
+        // ── Helpers ──────────────────────────────────────────
+        function showError(inputEl, msgEl, textEl, message) {
+            inputEl.classList.add('input-error');
+            inputEl.classList.remove('input-success');
+            msgEl.classList.add('visible');
+            textEl.textContent = message;
+            inputEl.setAttribute('aria-invalid', 'true');
+        }
+
+        function clearError(inputEl, msgEl) {
+            inputEl.classList.remove('input-error');
+            inputEl.classList.add('input-success');
+            msgEl.classList.remove('visible');
+            inputEl.setAttribute('aria-invalid', 'false');
+        }
+
+        // ── Validators ───────────────────────────────────────
+        function validateName(v)  { return v.trim() ? '' : 'Please enter your full name.'; }
+        function validateEmail(v) {
+            if (!v.trim()) return 'Please enter your email address.';
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailRegex.test(v)) return 'Please enter a valid email address (e.g., user@example.com).';
+            return '';
+        }
+        function validatePhone(v) {
+            const digits = v.replace(/\D/g, '');
+            if (!digits)          return 'Please enter your phone number.';
+            if (digits.length < 10) return 'Phone number must be at least 10 digits.';
+            if (!/^\d+$/.test(digits)) return 'Phone number must contain numbers only.';
+            return '';
+        }
+        function validatePassword(v) {
+            if (!v)           return 'Please enter a password.';
+            if (v.length < 6) return 'Password must be at least 6 characters.';
+            return '';
+        }
+        function validateConfirm(v) {
+            if (!v)                          return 'Please confirm your password.';
+            if (v !== passInput.value)        return 'Passwords do not match.';
+            return '';
+        }
+
+        // ── Password Strength ─────────────────────────────────
+        passInput.addEventListener('input', () => {
+            const val     = passInput.value;
+            const wrapper = document.getElementById('strength-wrapper');
+            const fill    = document.getElementById('strength-fill');
+            const label   = document.getElementById('strength-label');
+
+            if (!val) { wrapper.style.display = 'none'; return; }
+            wrapper.style.display = 'block';
+
+            let score = 0;
+            if (val.length >= 6)                          score++;
+            if (val.length >= 10)                         score++;
+            if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
+            if (/\d/.test(val))                           score++;
+            if (/[^A-Za-z0-9]/.test(val))                score++;
+
+            const levels = [
+                { pct: '20%', color: '#ef4444', text: 'Very Weak' },
+                { pct: '40%', color: '#f97316', text: 'Weak' },
+                { pct: '60%', color: '#f59e0b', text: 'Fair' },
+                { pct: '80%', color: '#10b981', text: 'Strong' },
+                { pct: '100%', color: '#059669', text: 'Very Strong' },
+            ];
+
+            const lvl = levels[Math.min(score - 1, 4)] || levels[0];
+            fill.style.width           = lvl.pct;
+            fill.style.backgroundColor = lvl.color;
+            label.textContent          = lvl.text;
+            label.style.color          = lvl.color;
+
+            // Live validate password on input
+            const err = validatePassword(val);
+            if (passInput.classList.contains('input-error') && !err)
+                clearError(passInput, document.getElementById('reg-pass-error'));
+        });
+
+        // ── Real-time blur validation ─────────────────────────
+        nameInput.addEventListener('blur', () => {
+            const err = validateName(nameInput.value);
+            if (err) showError(nameInput, document.getElementById('name-error'), document.getElementById('name-error-text'), err);
+            else     clearError(nameInput, document.getElementById('name-error'));
+        });
+
+        emailInput.addEventListener('blur', () => {
+            const err = validateEmail(emailInput.value);
+            if (err) showError(emailInput, document.getElementById('reg-email-error'), document.getElementById('reg-email-error-text'), err);
+            else     clearError(emailInput, document.getElementById('reg-email-error'));
+        });
+
+        phoneInput.addEventListener('blur', () => {
+            const err = validatePhone(phoneInput.value);
+            if (err) showError(phoneInput, document.getElementById('phone-error'), document.getElementById('phone-error-text'), err);
+            else     clearError(phoneInput, document.getElementById('phone-error'));
+        });
+
+        passInput.addEventListener('blur', () => {
+            const err = validatePassword(passInput.value);
+            if (err) showError(passInput, document.getElementById('reg-pass-error'), document.getElementById('reg-pass-error-text'), err);
+            else     clearError(passInput, document.getElementById('reg-pass-error'));
+        });
+
+        confirmInput.addEventListener('blur', () => {
+            const err = validateConfirm(confirmInput.value);
+            if (err) showError(confirmInput, document.getElementById('confirm-error'), document.getElementById('confirm-error-text'), err);
+            else     clearError(confirmInput, document.getElementById('confirm-error'));
+        });
+
+        // Clear errors live
+        [nameInput, emailInput, phoneInput, passInput, confirmInput].forEach(inp => {
+            inp.addEventListener('input', () => {
+                if (inp.classList.contains('input-error')) {
+                    let err = '';
+                    if (inp === nameInput)    err = validateName(inp.value);
+                    if (inp === emailInput)   err = validateEmail(inp.value);
+                    if (inp === phoneInput)   err = validatePhone(inp.value);
+                    if (inp === passInput)    err = validatePassword(inp.value);
+                    if (inp === confirmInput) err = validateConfirm(inp.value);
+                    if (!err) {
+                        inp.classList.remove('input-error');
+                        inp.classList.add('input-success');
+                        const errEl = inp.closest('.input-group').querySelector('.error-msg');
+                        if (errEl) errEl.classList.remove('visible');
+                    }
+                }
+            });
+        });
+
+        // ── Show / Hide Password ─────────────────────────────
+        document.getElementById('toggle-reg-password').addEventListener('click', () => {
+            const isHidden = passInput.type === 'password';
+            passInput.type = isHidden ? 'text' : 'password';
+            document.getElementById('toggle-reg-password').textContent = isHidden ? '🙈' : '👁';
+        });
+
+        document.getElementById('toggle-confirm-password').addEventListener('click', () => {
+            const isHidden = confirmInput.type === 'password';
+            confirmInput.type = isHidden ? 'text' : 'password';
+            document.getElementById('toggle-confirm-password').textContent = isHidden ? '🙈' : '👁';
+        });
+
+        // ── Form Submit ──────────────────────────────────────
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const checks = [
+                [nameInput,    document.getElementById('name-error'),       document.getElementById('name-error-text'),       validateName],
+                [emailInput,   document.getElementById('reg-email-error'),  document.getElementById('reg-email-error-text'),  validateEmail],
+                [phoneInput,   document.getElementById('phone-error'),      document.getElementById('phone-error-text'),      validatePhone],
+                [passInput,    document.getElementById('reg-pass-error'),   document.getElementById('reg-pass-error-text'),   validatePassword],
+                [confirmInput, document.getElementById('confirm-error'),    document.getElementById('confirm-error-text'),    validateConfirm],
+            ];
+
+            let valid = true;
+            checks.forEach(([inp, msgEl, textEl, validator]) => {
+                const err = validator(inp.value);
+                if (err) { showError(inp, msgEl, textEl, err); valid = false; }
+                else       clearError(inp, msgEl);
+            });
+
+            if (!valid) {
+                form.classList.add('form-shake');
+                setTimeout(() => form.classList.remove('form-shake'), 450);
+                // Scroll to first error
+                const firstError = form.querySelector('.input-error');
+                if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
+            // UI Feedback
+            const btn     = document.getElementById('register-submit-btn');
+            const btnText = document.getElementById('reg-btn-text');
+            const spinner = document.getElementById('reg-spinner');
+
+            btn.disabled          = true;
+            btnText.textContent   = 'Creating account...';
+            spinner.style.display = 'inline';
+
+            // 2. Async Registration via Flask Backend
+            const userData = {
+                name: nameInput.value.trim(),
+                email: emailInput.value.trim(),
+                phone: phoneInput.value.trim(),
+                password: passInput.value
+            };
+
+            const success = await Auth.register(userData, 'patient');
+
+            if (success) {
+                // Show success overlay
+                const overlay = document.getElementById('success-overlay');
+                overlay.classList.add('show');
+                requestAnimationFrame(() => {
+                    document.getElementById('progress-bar').style.width = '100%';
+                });
+
+                setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+            } else {
+                btn.disabled          = false;
+                btnText.textContent   = '🚀 Create Account';
+                spinner.style.display = 'none';
+                
+                // Display specific error if existing
+                showError(emailInput, document.getElementById('reg-email-error'), document.getElementById('reg-email-error-text'), 'This email is already registered or invalid. Please try another.');
+                form.classList.add('form-shake');
+                setTimeout(() => form.classList.remove('form-shake'), 450);
+            }
+        });
+
+    })();
+    </script>
+
+</body>
+</html>

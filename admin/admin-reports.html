@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Reports - MediPath Admin</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body style="background-color: #f8fafc;">
+
+    <!-- Admin Mobile Header -->
+    <header class="admin-mobile-header">
+        <div class="logo">
+            <span class="logo-cross">+</span> MediPath
+        </div>
+        <button class="hamburger-btn" onclick="toggleSidebar()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">
+            ☰
+        </button>
+    </header>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="admin-dashboard.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath <span style="font-size: 0.8rem; opacity: 0.7;">Admin</span>
+                </a>
+            </div>
+            
+            <p class="sidebar-label">Management</p>
+            <ul class="sidebar-menu">
+                <li><a href="admin-dashboard.html" class="sidebar-link">📊 System Overview</a></li>
+                <li><a href="admin-doctors.html" class="sidebar-link">👨‍⚕️ Verify Physicians</a></li>
+                <li><a href="admin-patients.html" class="sidebar-link">👥 Manage Patients</a></li>
+                <li><a href="admin-appointments.html" class="sidebar-link">📅 All Appointments</a></li>
+                <li><a href="admin-admins.html" class="sidebar-link">🛡️ Manage Team</a></li>
+                <li><a href="admin-reports.html" class="sidebar-link active">📈 Analytics Reports</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <button onclick="logoutAdmin()" class="sidebar-link logout-link" style="width: 100%; border: none; cursor: pointer;">
+                    🚪 Logout System
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="mb-3" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 style="font-weight: 800; letter-spacing: -0.02em;">Analytics Reports</h1>
+                    <p style="color: #64748b;">Comprehensive data insights and growth metrics.</p>
+                </div>
+            </header>
+
+            <div class="grid-2 mb-3">
+                <div class="card">
+                    <h3 class="mb-2">User Distribution</h3>
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div id="report-pats-bar"></div>
+                        <div id="report-docs-bar"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 class="mb-2">Appointment Success Rate</h3>
+                    <div id="report-appt-stats" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="mb-2">System Growth Analytics</h3>
+                <div style="padding: 2rem; background: var(--bg-color); border-radius: 8px; text-align: center; border: 1px dashed var(--border-color);">
+                    <p style="color: #64748b; font-style: italic;">Historical data visualization module active. Collecting metrics for weekly trend analysis.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../script.js"></script>
+    <script src="admin.js"></script>
+    <script>
+        async function loadReports() {
+            const summary = await API.getAdminReportSummary();
+            if (!summary || summary.success === false) {
+                showToast(summary?.message || 'Failed to load report data.', 'error');
+                return;
+            }
+            const patientsCount = Number(summary.patients || 0);
+            const doctorsCount = Number(summary.doctors || 0);
+            const appts = summary.appointments || {};
+            const total = patientsCount + doctorsCount;
+            const patP = total ? Math.round((patientsCount / total) * 100) : 0;
+            const docP = total ? Math.round((doctorsCount / total) * 100) : 0;
+
+            document.getElementById('report-pats-bar').innerHTML = `
+                <div style="margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+                    <span style="font-weight: 600;">Patients (${patientsCount})</span>
+                    <span>${patP}%</span>
+                </div>
+                <div style="height: 10px; width: 100%; background: #e2e8f0; border-radius: 5px; overflow: hidden;">
+                    <div style="height: 100%; width: ${patP}%; background: var(--primary-color);"></div>
+                </div>
+            `;
+
+            document.getElementById('report-docs-bar').innerHTML = `
+                <div style="margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+                    <span style="font-weight: 600;">Specialists (${doctorsCount})</span>
+                    <span>${docP}%</span>
+                </div>
+                <div style="height: 10px; width: 100%; background: #e2e8f0; border-radius: 5px; overflow: hidden;">
+                    <div style="height: 100%; width: ${docP}%; background: #10b981;"></div>
+                </div>
+            `;
+
+            const completed = Number(appts.completed || 0);
+            const cancelled = Number(appts.cancelled || 0);
+            const pending = Number(appts.pending || 0);
+
+            document.getElementById('report-appt-stats').innerHTML = `
+                <div style="padding: 1rem; background: #f1f5f9; border-radius: 8px;">
+                    <div style="font-size: 0.8rem; color: #64748b;">COMPLETED</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: #10b981;">${completed}</div>
+                </div>
+                <div style="padding: 1rem; background: #f1f5f9; border-radius: 8px;">
+                    <div style="font-size: 0.8rem; color: #64748b;">ACTIVE PENDING</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: var(--primary-color);">${pending}</div>
+                </div>
+                <div style="padding: 1rem; background: #f1f5f9; border-radius: 8px;">
+                    <div style="font-size: 0.8rem; color: #64748b;">SYSTEM CANCELLATIONS</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: #ef4444;">${cancelled}</div>
+                </div>
+            `;
+        }
+        document.addEventListener('DOMContentLoaded', loadReports);
+    </script>
+</body>
+</html>

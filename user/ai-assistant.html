@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MediPath AI Symptom Checker — Describe your symptoms and get instant healthcare guidance.">
+    <title>AI Symptom Checker - MediPath</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .ai-chat-container {
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .chat-box {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            min-height: 340px;
+            max-height: 420px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+            scroll-behavior: smooth;
+        }
+
+        .chat-bubble {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+            animation: fadeInUp 0.35s ease;
+        }
+
+        .chat-bubble.user { flex-direction: row-reverse; }
+
+        .bubble-avatar {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+            font-weight: 700;
+        }
+
+        .ai-avatar   { background-color: var(--primary-light); color: var(--primary-color); }
+        .user-avatar { background-color: var(--accent-light);  color: var(--accent-color); }
+
+        .bubble-content {
+            max-width: 75%;
+            padding: 0.875rem 1.125rem;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+
+        .ai-bubble .bubble-content {
+            background-color: var(--surface-2);
+            color: var(--text-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        .user-bubble .bubble-content {
+            background-color: var(--primary-color);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bubble-content p { color: inherit; margin-bottom: 0; font-size: 0.9rem; }
+
+        .chat-input-row {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .chat-input-row input {
+            flex: 1;
+        }
+
+        .quick-suggestions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .suggestion-btn {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+            border: 1px solid rgba(37,99,235,0.2);
+            padding: 0.4rem 0.875rem;
+            border-radius: var(--radius-full);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            font-family: var(--font-primary);
+        }
+
+        .suggestion-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        [data-theme="dark"] .suggestion-btn {
+            background-color: rgba(37,99,235,0.2);
+            border-color: rgba(37,99,235,0.3);
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            padding: 0.75rem 1rem;
+        }
+
+        .typing-dot {
+            width: 6px; height: 6px;
+            background-color: var(--text-muted);
+            border-radius: 50%;
+            animation: typingBounce 1.2s infinite;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30%            { transform: translateY(-6px); }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ===== NAVBAR ===== -->
+    <header>
+        <nav class="navbar" id="main-navbar" role="navigation" aria-label="Main navigation">
+            <div class="nav-container">
+                <a href="index.html" class="logo" aria-label="MediPath Home">
+                    <span class="logo-cross">+</span> MediPath
+                </a>
+                <ul class="nav-menu" id="nav-menu">
+                    <li><a href="index.html"          class="nav-item" data-page="index">Home</a></li>
+                    <li><a href="index.html#services"  class="nav-item" data-page="services">Services</a></li>
+                    <li><a href="doctors.html"         class="nav-item" data-page="doctors">Find Doctor</a></li>
+                    <li><a href="appointments.html"    class="nav-item" data-page="appointments">Appointments</a></li>
+                    <li><a href="index.html#emergency" class="nav-item emergency-link" data-page="emergency">🚨 Emergency</a></li>
+                    <li><a href="contact.html"         class="nav-item" data-page="contact">Contact</a></li>
+                </ul>
+                <div class="nav-auth" id="nav-auth">
+                    <a href="login.html"    class="btn btn-outline btn-sm" id="login-btn">Login</a>
+                    <a href="register.html" class="btn btn-primary btn-sm" id="register-btn">Register</a>
+                </div>
+                <div class="nav-right">
+                    <button id="dark-mode-toggle" title="Toggle Dark Mode" aria-label="Toggle dark mode">🌙</button>
+                    <button class="hamburger" id="hamburger" aria-label="Toggle mobile menu" aria-expanded="false">
+                        <span></span><span></span><span></span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- ===== PAGE HEADER ===== -->
+    <div class="page-hero">
+        <div class="container">
+            <span class="section-badge">🤖 AI-Powered</span>
+            <h1 class="page-hero-title">Symptom Checker</h1>
+            <p class="page-hero-desc">Describe your symptoms and our AI will suggest possible conditions and the right specialist to consult.</p>
+        </div>
+    </div>
+
+    <!-- ===== CHAT INTERFACE ===== -->
+    <div class="container mt-3 mb-3">
+        <div class="ai-chat-container">
+
+            <!-- Disclaimer -->
+            <div class="alert" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: var(--warning-color); border-radius: var(--radius-sm); margin-bottom: 1.5rem; font-size: 0.85rem;">
+                ⚠️ <strong>Disclaimer:</strong> This tool provides general guidance only. Always consult a qualified medical professional for diagnosis and treatment.
+            </div>
+
+            <!-- Chat Box -->
+            <div class="chat-box" id="chat-box" aria-live="polite" aria-label="AI health chat">
+                <!-- Initial AI greeting -->
+                <div class="chat-bubble ai-bubble">
+                    <div class="bubble-avatar ai-avatar">🤖</div>
+                    <div class="bubble-content">
+                        <p>Hello! I'm MediPath AI. Please describe your symptoms and I'll help you understand what might be going on and which specialist to consult. How are you feeling today?</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Suggestions -->
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.625rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;">Quick Symptoms:</p>
+            <div class="quick-suggestions">
+                <button class="suggestion-btn" onclick="sendSuggestion('I have a headache and fever')">🤕 Headache & Fever</button>
+                <button class="suggestion-btn" onclick="sendSuggestion('I have chest pain')">💔 Chest Pain</button>
+                <button class="suggestion-btn" onclick="sendSuggestion('My stomach hurts')">🫃 Stomach Pain</button>
+                <button class="suggestion-btn" onclick="sendSuggestion('I have a cough and sore throat')">😷 Cough & Sore Throat</button>
+                <button class="suggestion-btn" onclick="sendSuggestion('I feel dizzy and tired')">😵 Dizziness & Fatigue</button>
+            </div>
+
+            <!-- Input Row -->
+            <div class="chat-input-row">
+                <input type="text" id="symptom-input" class="form-control"
+                    placeholder="Describe your symptoms here..."
+                    aria-label="Describe your symptoms"
+                    onkeydown="if(event.key==='Enter') sendMessage()">
+                <button class="btn btn-primary" onclick="sendMessage()" aria-label="Send message" id="send-btn">
+                    Send 📤
+                </button>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; flex-wrap: wrap;">
+                <a href="doctors.html" class="btn btn-outline">👨‍⚕️ Find a Specialist</a>
+                <a href="appointments.html" class="btn btn-primary">📅 Book Appointment</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="disclaimer">
+        ⚠️ MediPath AI is for informational guidance only. Always seek professional medical advice for diagnosis.
+    </footer>
+
+    <script src="/script.js"></script>
+    <script>
+        // Simple AI Response Simulation
+        const aiResponses = {
+            'headache': {
+                reply: '🧠 <strong>Headache & Fever</strong><br>These symptoms could indicate a viral infection, flu, dehydration, or sinusitis. Monitor your temperature. If fever exceeds 39°C (102°F) or symptoms worsen, consult a doctor.<br><br>📌 Recommended specialist: <strong>General Practitioner</strong>',
+                action: 'Find a GP →'
+            },
+            'chest pain': {
+                reply: '🚨 <strong>IMPORTANT — Chest Pain</strong><br>Chest pain can be serious. It may indicate cardiac issues, anxiety, or musculoskeletal problems. If pain is severe, radiating to your arm or jaw, call emergency services immediately.<br><br>📌 Recommended specialist: <strong>Cardiologist</strong>',
+                action: 'Find a Cardiologist →',
+                emergency: true
+            },
+            'stomach': {
+                reply: '🫃 <strong>Stomach Pain</strong><br>Stomach pain has many causes including indigestion, gastritis, IBS, or appendicitis (if pain is in lower right). If severe or accompanied by vomiting, seek care promptly.<br><br>📌 Recommended specialist: <strong>Gastroenterologist</strong>',
+                action: 'Book Appointment →'
+            },
+            'cough': {
+                reply: '😷 <strong>Cough & Sore Throat</strong><br>Common cold, flu, or respiratory infection are likely. Rest, stay hydrated. If you have difficulty breathing or the cough lasts more than 2 weeks, consult a doctor.<br><br>📌 Recommended specialist: <strong>ENT Specialist or General Practitioner</strong>',
+                action: 'Find a Doctor →'
+            },
+            'dizzy': {
+                reply: '😵 <strong>Dizziness & Fatigue</strong><br>These symptoms can result from anemia, dehydration, inner ear issues, or low blood pressure. Try resting and drinking water. If persistent, get checked.<br><br>📌 Recommended specialist: <strong>Neurologist or General Practitioner</strong>',
+                action: 'Book Appointment →'
+            },
+            'default': {
+                reply: '🔍 <strong>Symptom Analysis</strong><br>Thanks for sharing your symptoms. Based on what you described, I recommend consulting a General Practitioner for an accurate diagnosis. They can refer you to the right specialist after evaluation.<br><br>📌 Recommended: <strong>Book an appointment today</strong>.',
+                action: 'Book Appointment →'
+            }
+        };
+
+        function getAIResponse(input) {
+            const text = input.toLowerCase();
+            if (text.includes('chest')) return aiResponses['chest pain'];
+            if (text.includes('head') || text.includes('fever') || text.includes('temperature')) return aiResponses['headache'];
+            if (text.includes('stomach') || text.includes('abdomen') || text.includes('belly') || text.includes('nausea')) return aiResponses['stomach'];
+            if (text.includes('cough') || text.includes('throat') || text.includes('cold')) return aiResponses['cough'];
+            if (text.includes('dizz') || text.includes('tired') || text.includes('fatigue') || text.includes('weak')) return aiResponses['dizzy'];
+            return aiResponses['default'];
+        }
+
+        function addBubble(content, isUser = false) {
+            const chatBox = document.getElementById('chat-box');
+            const bubble  = document.createElement('div');
+            bubble.className = `chat-bubble ${isUser ? 'user-bubble' : 'ai-bubble'}`;
+            bubble.innerHTML = `
+                <div class="bubble-avatar ${isUser ? 'user-avatar' : 'ai-avatar'}">${isUser ? '👤' : '🤖'}</div>
+                <div class="bubble-content"><p>${content}</p></div>
+            `;
+            chatBox.appendChild(bubble);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function addTypingIndicator() {
+            const chatBox = document.getElementById('chat-box');
+            const typing  = document.createElement('div');
+            typing.className = 'chat-bubble ai-bubble';
+            typing.id = 'typing-indicator';
+            typing.innerHTML = `
+                <div class="bubble-avatar ai-avatar">🤖</div>
+                <div class="bubble-content">
+                    <div class="typing-indicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            `;
+            chatBox.appendChild(typing);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const t = document.getElementById('typing-indicator');
+            if (t) t.remove();
+        }
+
+        function sendMessage() {
+            const input    = document.getElementById('symptom-input');
+            const message  = input.value.trim();
+            if (!message) return;
+
+            addBubble(message, true);
+            input.value = '';
+
+            addTypingIndicator();
+            API.analyzeSymptoms(message).then((result) => {
+                removeTypingIndicator();
+                if (!result || result.success === false) {
+                    const fallback = getAIResponse(message);
+                    addBubble(fallback.reply);
+                    return;
+                }
+                addBubble(
+                    `🩺 <strong>Urgency:</strong> ${result.urgency}<br>` +
+                    `👨‍⚕️ <strong>Recommended Specialist:</strong> ${result.specialist}<br>` +
+                    `📌 <strong>Advice:</strong> ${result.advice}`
+                );
+                if (result.emergency) {
+                    addBubble('🚨 <strong>EMERGENCY ALERT:</strong> Please seek immediate medical attention.');
+                    setTimeout(() => { window.location.href = 'emergency.html'; }, 1500);
+                }
+            });
+        }
+
+        function sendSuggestion(text) {
+            document.getElementById('symptom-input').value = text;
+            sendMessage();
+        }
+    </script>
+</body>
+
+</html>

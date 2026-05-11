@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Dashboard - MediPath</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body style="background-color: var(--bg-color);">
+
+    <!-- ===== NAVBAR ===== -->
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="doctor-dashboard.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath <span style="color: var(--text-light); font-weight: 500; font-size: 0.9rem;">Doctor Console</span>
+                </a>
+                <div class="nav-auth">
+                    <span id="doc-active-name" style="font-weight: 600; font-size: 0.9rem; margin-right: 1rem;"></span>
+                    <button onclick="Auth.logout()" class="btn btn-outline btn-sm">Sign Out</button>
+                </div>
+                <div class="nav-right">
+                    <button id="dark-mode-toggle">🌙</button>
+                    <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <p class="sidebar-label">Main Menu</p>
+            <ul class="sidebar-menu">
+                <li><a href="doctor-dashboard.html" class="sidebar-link active">📊 Dashboard Overview</a></li>
+                <li><a href="doctor-appointments.html" class="sidebar-link">📅 Patient Appointments</a></li>
+                <li><a href="doctor-messages.html" class="sidebar-link">💬 Consultations / Messages</a></li>
+                <li><a href="doctor-profile.html" class="sidebar-link">👤 Professional Profile</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <div class="dashboard-header">
+                <div>
+                    <h2 id="welcome-msg">Loading...</h2>
+                    <p class="text-light">Manage your clinical schedule and patient interactions.</p>
+                </div>
+                <div>
+                    <span class="badge badge-approved" style="font-size: 0.85rem; padding: 0.5rem 1rem;">✓ Verified Specialist</span>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid-4 mb-3">
+                <div class="card stat-card">
+                    <span class="stat-label">TODAY'S APPOINTMENTS</span>
+                    <h2 id="stat-today" class="stat-number">0</h2>
+                </div>
+                <div class="card stat-card">
+                    <span class="stat-label">PENDING REQUESTS</span>
+                    <h2 id="stat-pending" class="stat-number">0</h2>
+                </div>
+                <div class="card stat-card">
+                    <span class="stat-label">NEW MESSAGES</span>
+                    <h2 id="stat-messages" class="stat-number">0</h2>
+                </div>
+                <div class="card stat-card">
+                    <span class="stat-label">AVAILABILITY STATUS</span>
+                    <h2 id="stat-availability" class="stat-number" style="font-size: 1.5rem;">--</h2>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <!-- Recent Appointments -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3>Upcoming Visits</h3>
+                        <a href="doctor-appointments.html" class="btn btn-outline btn-sm">View All</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-appts-tbody">
+                                <tr><td colspan="3" class="text-center text-light">No appointments found.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <h3 class="mb-1">Quick Management</h3>
+                    <div class="quick-actions-grid" style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+                        <a href="doctor-appointments.html" class="btn btn-primary" style="justify-content: flex-start; padding: 1.25rem;">
+                            📅 Review Pending Appointments
+                        </a>
+                        <a href="doctor-messages.html" class="btn btn-outline" style="justify-content: flex-start; padding: 1.25rem;">
+                            💬 Start Consultations
+                        </a>
+                        <a href="doctor-profile.html" class="btn btn-outline" style="justify-content: flex-start; padding: 1.25rem;">
+                            👤 Update Professional Bio
+                        </a>
+                    </div>
+                    <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                        <h4 style="margin-bottom: 0.5rem;">Booking Notifications (<span id="doctor-alert-count">0</span>)</h4>
+                        <ul id="doctor-alert-list" style="margin: 0; padding-left: 1rem; color: var(--text-light);">
+                            <li>No new booking notifications.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/script.js"></script>
+    <script>
+        Auth.requireAuth('doctor');
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Auth.refreshSession();
+            const doc = Auth.getUser();
+            if (!doc) return;
+
+            const activeNameEl = document.getElementById('doc-active-name');
+            const welcomeEl = document.getElementById('welcome-msg');
+            if (activeNameEl) activeNameEl.textContent = doc.name || 'Doctor';
+            if (welcomeEl) welcomeEl.textContent = `Welcome, ${doc.name || 'Doctor'} 👋`;
+
+            const raw = await API.getClinicalAppointments();
+            const docAppts = Array.isArray(raw) ? raw : [];
+
+            const pendingCount = docAppts.filter(a => a.status === 'Pending').length;
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayCount = docAppts.filter(a => {
+                const dt = (a.appointment_date || '').toString();
+                return dt.startsWith(todayStr);
+            }).length;
+
+            const pendingEl = document.getElementById('stat-pending');
+            const todayEl = document.getElementById('stat-today');
+            const messagesEl = document.getElementById('stat-messages');
+            const availabilityEl = document.getElementById('stat-availability');
+            if (pendingEl) pendingEl.textContent = pendingCount;
+            if (todayEl) todayEl.textContent = todayCount;
+            if (messagesEl) messagesEl.textContent = '—';
+            if (availabilityEl) {
+                const profile = await API.getDoctorProfile();
+                const isActive = !(profile && profile.success && profile.doctor && profile.doctor.is_active === false);
+                availabilityEl.textContent = isActive ? 'Active' : 'Inactive';
+                availabilityEl.style.color = isActive ? 'var(--success-color)' : 'var(--danger-color)';
+            }
+
+            const tbody = document.getElementById('recent-appts-tbody');
+            if (tbody && docAppts.length > 0) {
+                const sorted = [...docAppts].sort((x, y) =>
+                    String(y.appointment_date || '').localeCompare(String(x.appointment_date || '')));
+                tbody.innerHTML = sorted.slice(0, 5).map(a => `
+                    <tr>
+                        <td style="font-weight:600;">${a.patient_name || 'Patient'}</td>
+                        <td>${formatDate(a.appointment_date)}</td>
+                        <td>${getStatusBadge(a.status)}</td>
+                    </tr>
+                `).join('');
+            }
+
+            const alertCountEl = document.getElementById('doctor-alert-count');
+            const alertListEl = document.getElementById('doctor-alert-list');
+            const alerts = docAppts
+                .filter((item) => {
+                    const status = String(item.status || '').toLowerCase();
+                    return status === 'pending' || status === 'confirmed';
+                })
+                .sort((a, b) => String(b.appointment_date || '').localeCompare(String(a.appointment_date || '')))
+                .slice(0, 12)
+                .map((item) => ({
+                    patient_name: item.patient_name || 'Patient',
+                    appointment_date: item.appointment_date,
+                }));
+            if (alertCountEl) alertCountEl.textContent = String(alerts.length);
+            if (alertListEl) {
+                if (!alerts.length) {
+                    alertListEl.innerHTML = '<li>No new booking notifications.</li>';
+                } else {
+                    alertListEl.innerHTML = alerts.slice(0, 5).map((item) =>
+                        `<li><strong>${item.patient_name || 'Patient'}</strong> booked an appointment (${formatDate(item.appointment_date)}).</li>`
+                    ).join('');
+                    showToast(`You have ${alerts.length} appointment booking notification(s).`, 'info');
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Book an appointment with a specialist on MediPath - Smart Healthcare Navigation System.">
+    <title>Book Appointment - MediPath</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body style="background-color: var(--bg-color);">
+
+    <!-- ===== NAVBAR ===== -->
+    <header>
+        <nav class="navbar" id="main-navbar" role="navigation" aria-label="Main navigation">
+            <div class="nav-container">
+                <a href="dashboard.html" class="logo" aria-label="MediPath Home">
+                    <span class="logo-cross">+</span> MediPath
+                </a>
+                <ul class="nav-menu" id="nav-menu">
+                    <li><a href="dashboard.html"       class="nav-item" data-page="dashboard">Dashboard</a></li>
+                    <li><a href="doctors.html"         class="nav-item" data-page="doctors">Find Doctor</a></li>
+                    <li><a href="appointments.html"    class="nav-item active" data-page="appointments">Appointments</a></li>
+                    <li><a href="ai-assistant.html"    class="nav-item" data-page="ai-assistant">AI Assistant</a></li>
+                    <li><a href="emergency.html"       class="nav-item emergency-link" data-page="emergency">🚨 Emergency</a></li>
+                </ul>
+                <div class="nav-auth" id="nav-auth">
+                    <!-- Populated by script.js -->
+                </div>
+                <div class="nav-right">
+                    <button id="dark-mode-toggle" title="Toggle Dark Mode" aria-label="Toggle dark mode">🌙</button>
+                    <button class="hamburger" id="hamburger" aria-label="Toggle mobile menu" aria-expanded="false">
+                        <span></span><span></span><span></span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- ===== PAGE HEADER ===== -->
+    <div class="hero" style="padding: 5rem 0 3.5rem; text-align: center;">
+        <div class="container">
+            <span class="section-badge">Schedule a Visit</span>
+            <h1 class="hero-title">Book an Appointment</h1>
+            <p class="hero-description">Schedule your visit with a healthcare professional quickly and easily</p>
+        </div>
+    </div>
+
+    <!-- ===== APPOINTMENT FORM ===== -->
+    <main class="container mb-3" style="flex: 1;">
+        <div class="form-container" style="max-width: 800px; margin: 0 auto; border-top: 5px solid var(--primary-color);">
+            <form id="booking-form" novalidate>
+                <div class="grid-2" style="gap: 1.5rem;">
+                    <div class="form-group">
+                        <label for="booking-name">Full Name</label>
+                        <input type="text" id="booking-name" class="form-control" required placeholder="Enter your full name">
+                        <small class="error-msg" id="error-name"></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="booking-phone">Phone Number</label>
+                        <input type="tel" id="booking-phone" class="form-control" required placeholder="e.g. 0970000000" 
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '')" pattern="\d*">
+                        <small class="error-msg" id="error-phone"></small>
+                    </div>
+                </div>
+
+                <div class="form-group mt-1">
+                    <label for="booking-email">Email Address</label>
+                    <input type="email" id="booking-email" class="form-control" required placeholder="example@email.com">
+                    <small class="error-msg" id="error-email"></small>
+                </div>
+
+                <div class="form-group mt-1">
+                    <label for="booking-doctor">Select Doctor</label>
+                    <select id="booking-doctor" class="form-control" required>
+                        <option value="" disabled selected>Choose a specialist...</option>
+                    </select>
+                    <small class="error-msg" id="error-doctor"></small>
+                </div>
+
+                <div class="grid-2 mt-1" style="gap: 1.5rem;">
+                    <div class="form-group">
+                        <label for="booking-date">Appointment Date</label>
+                        <input type="date" id="booking-date" class="form-control" required>
+                        <small class="error-msg" id="error-date"></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="booking-time">Appointment Time</label>
+                        <select id="booking-time" class="form-control" required>
+                            <option value="" disabled selected>Select Time Slot...</option>
+                            <option value="09:00 AM">09:00 AM</option>
+                            <option value="10:00 AM">10:00 AM</option>
+                            <option value="11:00 AM">11:00 AM</option>
+                            <option value="12:00 PM">12:00 PM</option>
+                            <option value="02:00 PM">02:00 PM</option>
+                            <option value="03:00 PM">03:00 PM</option>
+                            <option value="04:00 PM">04:00 PM</option>
+                        </select>
+                        <small class="error-msg" id="error-time"></small>
+                    </div>
+                </div>
+
+                <div class="form-group mt-1">
+                    <label for="symptoms">Symptoms / Reason for Visit</label>
+                    <textarea id="symptoms" class="form-control" rows="4" placeholder="Briefly describe your symptoms or reason for visit..."></textarea>
+                </div>
+
+                <!-- Emergency Alert Box (Hidden) -->
+                <div id="emergency-alert" style="display: none; background-color: var(--accent-light); border: 2px solid var(--accent-color); border-radius: var(--radius); padding: 1.5rem; margin: 1.5rem 0; text-align: center;">
+                    <h3 style="color: var(--accent-color); font-weight: 800; font-size: 1.5rem;">🚨 CRITICAL SOS DETECTED</h3>
+                    <p style="color: var(--text-color); margin-bottom: 1rem;">
+                        Severe symptoms identified. Seek immediate professional intervention.
+                    </p>
+                    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                        <a href="tel:911" class="btn btn-accent btn-sm">📞 DIAL 911</a>
+                        <a href="emergency.html" class="btn btn-outline btn-sm">🏥 Find Nearest ER</a>
+                    </div>
+                </div>
+
+                <div class="form-group mt-2">
+                    <button type="submit" id="submit-booking" class="btn btn-primary" style="width: 100%; border-radius: var(--radius-sm); font-size: 1.1rem; padding: 1.25rem;">
+                        Book Appointment
+                    </button>
+                </div>
+
+                <div class="text-center mt-2">
+                    <a href="doctors.html" style="font-size: 0.9rem; color: var(--text-light); font-weight: 600;">← Browse Doctors First</a>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <!-- ===== CONFIRMATION OVERLAY ===== -->
+    <div id="confirmation-overlay" style="display: none;">
+        <div class="success-card">
+            <div class="success-icon">✓</div>
+            <h2 style="font-size: 2rem; color: var(--text-color); margin-bottom: 0.5rem; letter-spacing: -0.04em;">Appointment Confirmed</h2>
+            <p style="color: var(--success-color); font-weight: 700; font-size: 1.1rem; margin-bottom: 2rem;">Appointment booked successfully</p>
+            
+            <div class="confirm-details">
+                <div class="confirm-row">
+                    <span class="confirm-label">Doctor:</span>
+                    <span class="confirm-value" id="confirm-doctor">-</span>
+                </div>
+                <div class="confirm-row">
+                    <span class="confirm-label">Date:</span>
+                    <span class="confirm-value" id="confirm-date">-</span>
+                </div>
+                <div class="confirm-row">
+                    <span class="confirm-label">Time:</span>
+                    <span class="confirm-value" id="confirm-time">-</span>
+                </div>
+            </div>
+            
+            <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; color: var(--text-light); font-size: 0.95rem;">
+                <div class="spinner-small" style="width: 20px; height: 20px; border: 2px solid var(--border-color); border-top-color: var(--primary-color); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                Redirecting to dashboard...
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer disclaimer" style="margin-top: auto; padding: 2rem; background: var(--surface-2); text-align: center; font-size: 0.85rem; color: var(--text-light);">
+        &copy; 2026 MediPath Healthcare Navigator. 
+        ⚠️ Always seek professional emergency services for life-threatening conditions.
+    </footer>
+
+    <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px var(--primary-light);
+        }
+    </style>
+
+    <script src="/script.js"></script>
+</body>
+
+</html>

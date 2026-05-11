@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alerts - MediPath</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body style="background-color: var(--bg-color);">
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="dashboard.html" class="logo"><span class="logo-cross">+</span> MediPath</a>
+                <ul class="nav-menu">
+                    <li><a href="dashboard.html" class="nav-item">Dashboard</a></li>
+                    <li><a href="appointments.html" class="nav-item">Appointments</a></li>
+                    <li><a href="doctors.html" class="nav-item">Find Doctor</a></li>
+                    <li><a href="user/messages.html" class="nav-item">Messages</a></li>
+                    <li><a href="user/alerts.html" class="nav-item active">Alerts</a></li>
+                </ul>
+                <div class="nav-auth"><button onclick="Auth.logout()" class="btn btn-outline btn-sm">Sign Out</button></div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mt-3 mb-3">
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+                <h2 style="margin:0;">Alerts & Notifications</h2>
+                <button class="btn btn-outline btn-sm" onclick="markAllRead()">Mark all as read</button>
+            </div>
+            <div id="alerts-list" style="margin-top:1rem;">
+                <div class="text-light">Loading alerts...</div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/script.js"></script>
+    <script>
+        Auth.requireAuth('patient');
+
+        async function renderAlerts() {
+            const box = document.getElementById('alerts-list');
+            const rows = await API.getNotifications();
+            const items = Array.isArray(rows) ? rows : [];
+            if (!items.length) {
+                box.innerHTML = '<div class="text-light">No alerts available.</div>';
+                return;
+            }
+            box.innerHTML = items.map((n) => `
+                <div style="padding:0.85rem 0;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;gap:1rem;">
+                    <div>
+                        <div style="font-weight:700;">${n.message || 'Notification'}</div>
+                        <div class="text-light" style="font-size:0.8rem;">${n.date_created || ''}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <span class="appt-badge ${String(n.status || '').toLowerCase()==='read' ? 'badge-done' : 'badge-pending'}">${n.status || 'Unread'}</span>
+                        ${String(n.status || '').toLowerCase() === 'read' ? '' : `<button class="btn btn-outline btn-sm" onclick="markRead(${n.notification_id})">Mark read</button>`}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function markRead(id) {
+            const result = await API.markNotificationRead(id);
+            if (!result || result.success === false) {
+                showToast(result?.message || 'Unable to update alert.', 'error');
+                return;
+            }
+            await renderAlerts();
+        }
+
+        async function markAllRead() {
+            const rows = await API.getNotifications();
+            const items = Array.isArray(rows) ? rows : [];
+            const unread = items.filter((n) => String(n.status || '').toLowerCase() !== 'read');
+            for (const item of unread) {
+                await API.markNotificationRead(item.notification_id);
+            }
+            await renderAlerts();
+            showToast('All alerts marked as read.', 'success');
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Auth.refreshSession();
+            await renderAlerts();
+        });
+    </script>
+</body>
+</html>

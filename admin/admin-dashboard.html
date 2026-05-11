@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - MediPath</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        /* ---- Admin Dashboard Mobile Fixes ---- */
+        @media (max-width: 992px) {
+            .main-content {
+                padding: 1.25rem;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .page-header h1 {
+                font-size: 1.5rem !important;
+            }
+            #admin-user-info { display: none; }
+        }
+        @media (max-width: 768px) {
+            .admin-stats-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 0.75rem !important;
+            }
+            .admin-stats-grid .stat-number-lg {
+                font-size: 1.75rem !important;
+            }
+            .admin-stats-grid .card {
+                padding: 1rem !important;
+            }
+            .grid-2 { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 480px) {
+            .admin-stats-grid {
+                grid-template-columns: 1fr 1fr !important;
+            }
+            .admin-stats-grid .stat-number-lg {
+                font-size: 1.5rem !important;
+            }
+        }
+    </style>
+</head>
+<body style="background-color: #f8fafc;">
+
+    <!-- Admin Mobile Header -->
+    <header class="admin-mobile-header">
+        <div class="logo">
+            <span class="logo-cross">+</span> MediPath
+        </div>
+        <button class="hamburger-btn" onclick="toggleSidebar()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">
+            ☰
+        </button>
+    </header>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="admin-dashboard.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath <span style="font-size: 0.8rem; opacity: 0.7;">Admin</span>
+                </a>
+            </div>
+            
+            <p class="sidebar-label">Management</p>
+            <ul class="sidebar-menu">
+                <li><a href="admin-dashboard.html" class="sidebar-link active">📊 System Overview</a></li>
+                <li><a href="admin-doctors.html" class="sidebar-link">👨‍⚕️ Verify Physicians</a></li>
+                <li><a href="admin-patients.html" class="sidebar-link">👥 Manage Patients</a></li>
+                <li><a href="admin-appointments.html" class="sidebar-link">📅 All Appointments</a></li>
+                <li><a href="admin-admins.html" class="sidebar-link">🛡️ Manage Team</a></li>
+                <li><a href="admin-reports.html" class="sidebar-link">📈 Analytics Reports</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <button onclick="logoutAdmin()" class="sidebar-link logout-link" style="width: 100%; border: none; cursor: pointer;">
+                    🚪 Logout System
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="mb-3 page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <h1 style="font-weight: 800; letter-spacing: -0.02em; font-size: clamp(1.4rem, 4vw, 2rem);">Dashboard Insight</h1>
+                    <p style="color: #64748b; margin-bottom: 0;">System status at a glance.</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <div id="admin-user-info" style="font-weight: 600; color: var(--primary-color); white-space: nowrap;">
+                        MediPath Admin
+                    </div>
+                    <button onclick="logoutAdmin()" class="btn btn-outline btn-sm" style="white-space: nowrap;">
+                        🚪 Logout
+                    </button>
+                </div>
+            </header>
+
+            <!-- Action Required Card (Dynamic) -->
+            <div id="pending-action-card" class="card mb-3 animate-fadeIn" style="display: none; background: #fffbeb; border: 1px solid #fcd34d; padding: 1.5rem; border-left: 6px solid #f59e0b;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span style="font-size: 2rem;">🔔</span>
+                        <div>
+                            <h3 style="color: #92400e; font-size: 1.1rem; font-weight: 800; margin-bottom: 0.125rem;">Physician Verification Pending</h3>
+                            <p style="color: #b45309; font-size: 0.875rem; margin-bottom: 0;">There are <strong id="pending-count-text">0</strong> healthcare professionals awaiting medical board approval.</p>
+                        </div>
+                    </div>
+                    <a href="admin-doctors.html" class="btn btn-primary btn-sm" style="background: #d97706; border-color: #d97706;">Review Applications</a>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="admin-stats-grid mb-3" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                <div class="card" style="padding: 1.25rem; border-left: 4px solid var(--primary-color);">
+                    <span style="color: #64748b; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Total Patients</span>
+                    <h2 class="stat-number-lg" id="stat-patients" style="font-size: 2.25rem; font-weight: 800; margin: 0.25rem 0 0;">0</h2>
+                </div>
+                <div class="card" style="padding: 1.25rem; border-left: 4px solid #10b981;">
+                    <span style="color: #64748b; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Verified Doctors</span>
+                    <h2 class="stat-number-lg" id="stat-doctors" style="font-size: 2.25rem; font-weight: 800; margin: 0.25rem 0 0;">0</h2>
+                </div>
+                <div class="card" style="padding: 1.25rem; border-left: 4px solid #f59e0b;">
+                    <span style="color: #64748b; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Pending Approvals</span>
+                    <h2 class="stat-number-lg" id="stat-pending" style="font-size: 2.25rem; font-weight: 800; margin: 0.25rem 0 0;">0</h2>
+                </div>
+                <div class="card" style="padding: 1.25rem; border-left: 4px solid #6366f1;">
+                    <span style="color: #64748b; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Global Bookings</span>
+                    <h2 class="stat-number-lg" id="stat-appointments" style="font-size: 2.25rem; font-weight: 800; margin: 0.25rem 0 0;">0</h2>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="grid-2">
+                <div class="card">
+                    <h3 class="mb-2">Recent Appointments</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Doctor</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-appts-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 class="mb-2">New Registrations</h3>
+                    <div id="recent-docs-list"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../script.js"></script>
+    <script src="admin.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. Load Statistics
+            await updateDashboardStats();
+            
+            // 2. Load Recent Global Appointments
+            const appts = await API.getAdminAppointments();
+            const tbody = document.getElementById('recent-appts-tbody');
+            if (tbody) {
+                tbody.innerHTML = appts.slice(0, 5).map(a => `
+                    <tr>
+                        <td>${a.patientName}</td>
+                        <td>${a.doctorName}</td>
+                        <td>${getStatusBadge(a.status)}</td>
+                    </tr>
+                `).join('') || '<tr><td colspan="3" class="text-center">No recent records</td></tr>';
+            }
+
+            // 3. Load Recent Physician Enrollments
+            const doctors = await API.getDoctors();
+            const docList = document.getElementById('recent-docs-list');
+            if (docList) {
+                docList.innerHTML = doctors.slice(-5).map(d => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color);">
+                        <div>
+                            <div style="font-weight: 600;">Dr. ${d.name}</div>
+                            <div style="font-size: 0.8rem; color: #64748b;">${d.specialty || 'General Practitioner'}</div>
+                        </div>
+                        ${getStatusBadge('Approved')}
+                    </div>
+                `).join('') || '<div class="text-center py-2">No active physicians in registry</div>';
+            }
+        });
+    </script>
+</body>
+</html>

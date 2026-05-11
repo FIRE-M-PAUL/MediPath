@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Team - MediPath Admin</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body style="background-color: #f8fafc;">
+
+    <!-- Admin Mobile Header -->
+    <header class="admin-mobile-header">
+        <div class="logo">
+            <span class="logo-cross">+</span> MediPath
+        </div>
+        <button class="hamburger-btn" onclick="toggleSidebar()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">
+            ☰
+        </button>
+    </header>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="admin-dashboard.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath <span style="font-size: 0.8rem; opacity: 0.7;">Admin</span>
+                </a>
+            </div>
+            
+            <p class="sidebar-label">Management</p>
+            <ul class="sidebar-menu">
+                <li><a href="admin-dashboard.html" class="sidebar-link">📊 System Overview</a></li>
+                <li><a href="admin-doctors.html" class="sidebar-link">👨‍⚕️ Verify Physicians</a></li>
+                <li><a href="admin-patients.html" class="sidebar-link">👥 Manage Patients</a></li>
+                <li><a href="admin-appointments.html" class="sidebar-link">📅 All Appointments</a></li>
+                <li><a href="admin-admins.html" class="sidebar-link active">🛡️ Manage Team</a></li>
+                <li><a href="admin-reports.html" class="sidebar-link">📈 Analytics Reports</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <button onclick="logoutAdmin()" class="sidebar-link logout-link" style="width: 100%; border: none; cursor: pointer;">
+                    🚪 Logout System
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="content-header">
+                <div>
+                    <h1 class="section-title">Manage Administrative Team</h1>
+                    <p class="text-light">Add, promote, and oversee system administrators</p>
+                </div>
+            </header>
+
+            <div class="grid-1 mt-2">
+                <!-- Administrative Team -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <h3 class="card-title">Current Administrators</h3>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="data-table" id="admins-table">
+                            <thead>
+                                <tr>
+                                    <th>Admin Name</th>
+                                    <th>Email</th>
+                                    <th>Joined Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admins-list">
+                                <!-- Loaded via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- User Promotion Panel -->
+                <div class="card mt-2" style="background: var(--primary-light); border: 1px solid var(--primary-color);">
+                    <h3 class="card-title" style="color: var(--primary-color);">🛡️ Promote User to Admin</h3>
+                    <p class="text-light mb-2">Search for existing users to grant them administrative privileges.</p>
+                    
+                    <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                        <input type="text" id="user-search-input" class="form-control" placeholder="Search by name or email..." style="flex: 1;">
+                        <button class="btn btn-primary" onclick="searchUsersToPromote()">Search Users</button>
+                    </div>
+
+                    <div id="search-results-container" style="display: none;">
+                        <h4 class="mb-1">Search Results</h4>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Current Role</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="search-results-list">
+                                    <!-- Search results loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script src="../script.js"></script>
+    <script src="admin.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await renderAdminsTable();
+        });
+
+        async function renderAdminsTable() {
+            const list = document.getElementById('admins-list');
+            // In a real scenario, we'd have GET /api/admin/list
+            // For now, we'll filter from the unified user list if we add that endpoint
+            // Since we're in the middle of migration, I'll use a placeholder or the session info
+            const user = Auth.getUser();
+            
+            list.innerHTML = `
+                <tr>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:0.75rem;">
+                            <div style="width:35px; height:35px; background:var(--primary-color); color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700;">${user.name.charAt(0)}</div>
+                            <div>
+                                <div style="font-weight:600;">${user.name}</div>
+                                <div style="font-size:0.75rem; color:var(--primary-color);">Primary Administrator</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${user.email}</td>
+                    <td>04 Apr 2026</td>
+                    <td><span class="status-badge status-approved">Super Admin</span></td>
+                </tr>
+            `;
+        }
+
+        async function searchUsersToPromote() {
+            const query = document.getElementById('user-search-input').value.trim().toLowerCase();
+            if (query.length < 2) {
+                showToast("Please enter at least 2 characters to search.", "info");
+                return;
+            }
+
+            const resultsContainer = document.getElementById('search-results-container');
+            const resultsList = document.getElementById('search-results-list');
+            
+            resultsContainer.style.display = 'block';
+            resultsList.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-light);">Searching database...</td></tr>`;
+            
+            const allUsers = await API.getUsers();
+            const matches = allUsers.filter(u => 
+                u.role !== 'admin' &&
+                (u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query))
+            );
+
+            if (matches.length === 0) {
+                resultsList.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-muted);">No matching users found.</td></tr>`;
+                return;
+            }
+
+            resultsList.innerHTML = matches.map(u => `
+                <tr class="animate-fadeIn">
+                    <td><strong>${u.name}</strong></td>
+                    <td>${u.email}</td>
+                    <td><span class="status-badge status-${u.role === 'patient' ? 'active' : 'pending'}">${u.role.charAt(0).toUpperCase() + u.role.slice(1)}</span></td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick="promoteToAdmin(${u.id})">🛡️ Promote to Admin</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
