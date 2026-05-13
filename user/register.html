@@ -563,7 +563,7 @@
                                 aria-required="true"
                                 style="padding-right: 3rem;">
                             <button type="button" class="password-toggle" id="toggle-reg-password"
-                                title="Show/Hide password" aria-label="Toggle password visibility">👁</button>
+                                title="Show password" aria-label="Show password"></button>
                         </div>
                         <!-- Password Strength Indicator -->
                         <div class="password-strength" id="strength-wrapper" style="display:none;">
@@ -589,7 +589,7 @@
                                 aria-required="true"
                                 style="padding-right: 3rem;">
                             <button type="button" class="password-toggle" id="toggle-confirm-password"
-                                title="Show/Hide password" aria-label="Toggle confirm password visibility">👁</button>
+                                title="Show password" aria-label="Show password"></button>
                         </div>
                         <span class="error-msg" id="confirm-error" role="alert">
                             ❌ <span id="confirm-error-text">Passwords do not match</span>
@@ -641,6 +641,12 @@
         const phoneInput   = document.getElementById('reg-phone');
         const passInput    = document.getElementById('reg-password');
         const confirmInput = document.getElementById('reg-confirm');
+        const togglePassBtn = document.getElementById('toggle-reg-password');
+        const toggleConfirmBtn = document.getElementById('toggle-confirm-password');
+        if (window.MediPathPasswordToggle) {
+            MediPathPasswordToggle.setIcon(togglePassBtn, passInput.type === 'text');
+            MediPathPasswordToggle.setIcon(toggleConfirmBtn, confirmInput.type === 'text');
+        }
 
         roleInput.addEventListener('change', () => {
             if (roleInput.value === 'doctor') {
@@ -782,13 +788,21 @@
         document.getElementById('toggle-reg-password').addEventListener('click', () => {
             const isHidden = passInput.type === 'password';
             passInput.type = isHidden ? 'text' : 'password';
-            document.getElementById('toggle-reg-password').textContent = isHidden ? '🙈' : '👁';
+            const btn = document.getElementById('toggle-reg-password');
+            if (window.MediPathPasswordToggle) MediPathPasswordToggle.setIcon(btn, passInput.type === 'text');
+            const visible = passInput.type === 'text';
+            btn.title = visible ? 'Hide password' : 'Show password';
+            btn.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
         });
 
         document.getElementById('toggle-confirm-password').addEventListener('click', () => {
             const isHidden = confirmInput.type === 'password';
             confirmInput.type = isHidden ? 'text' : 'password';
-            document.getElementById('toggle-confirm-password').textContent = isHidden ? '🙈' : '👁';
+            const btn = document.getElementById('toggle-confirm-password');
+            if (window.MediPathPasswordToggle) MediPathPasswordToggle.setIcon(btn, confirmInput.type === 'text');
+            const visible = confirmInput.type === 'text';
+            btn.title = visible ? 'Hide password' : 'Show password';
+            btn.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
         });
 
         // ── Form Submit ──────────────────────────────────────

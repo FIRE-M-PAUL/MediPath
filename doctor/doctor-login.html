@@ -46,7 +46,11 @@
                 </div>
                 <div class="form-group mt-1">
                     <label for="password">Password</label>
-                    <input type="password" id="password" class="form-control" required>
+                    <div style="position: relative;">
+                        <input type="password" id="password" class="form-control" required autocomplete="current-password" style="padding-right: 2.75rem;">
+                        <button type="button" class="password-toggle" id="toggle-doctor-login-password" aria-label="Show password" title="Show password"
+                            style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); border: none; background: transparent; cursor: pointer; color: var(--text-light); line-height: 1;"></button>
+                    </div>
                 </div>
 
                 <div class="form-group mt-2">
@@ -64,6 +68,20 @@
 
     <script src="/script.js"></script>
     <script>
+        const doctorPassInput = document.getElementById('password');
+        const doctorPassToggle = document.getElementById('toggle-doctor-login-password');
+        if (doctorPassInput && doctorPassToggle && window.MediPathPasswordToggle) {
+            MediPathPasswordToggle.setIcon(doctorPassToggle, doctorPassInput.type === 'text');
+            doctorPassToggle.addEventListener('click', () => {
+                const hidden = doctorPassInput.type === 'password';
+                doctorPassInput.type = hidden ? 'text' : 'password';
+                MediPathPasswordToggle.setIcon(doctorPassToggle, doctorPassInput.type === 'text');
+                const visible = doctorPassInput.type === 'text';
+                doctorPassToggle.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
+                doctorPassToggle.title = visible ? 'Hide password' : 'Show password';
+            });
+        }
+
         const loginForm = document.getElementById('doctor-login-form');
         if (loginForm) {
             loginForm.addEventListener('submit', async (e) => {

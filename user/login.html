@@ -566,8 +566,7 @@
                                 aria-required="true"
                                 style="padding-right: 3rem;">
                             <button type="button" class="password-toggle" id="toggle-password"
-                                title="Show/Hide password" aria-label="Toggle password visibility">
-                                👁
+                                title="Show password" aria-label="Show password">
                             </button>
                         </div>
                         <span class="error-msg" id="password-error" role="alert">
@@ -622,6 +621,9 @@
         const emailInput = document.getElementById('login-email');
         const passInput  = document.getElementById('login-password');
         const toggleBtn  = document.getElementById('toggle-password');
+        if (toggleBtn && window.MediPathPasswordToggle) {
+            MediPathPasswordToggle.setIcon(toggleBtn, passInput.type === 'text');
+        }
 
         roleInput.addEventListener('change', () => {
             if (roleInput.value === 'doctor') {
@@ -688,9 +690,11 @@
         // ── Show / Hide Password ─────────────────────────────
         toggleBtn.addEventListener('click', () => {
             const isHidden = passInput.type === 'password';
-            passInput.type         = isHidden ? 'text' : 'password';
-            toggleBtn.textContent  = isHidden ? '🙈' : '👁';
-            toggleBtn.title        = isHidden ? 'Hide password' : 'Show password';
+            passInput.type = isHidden ? 'text' : 'password';
+            if (window.MediPathPasswordToggle) MediPathPasswordToggle.setIcon(toggleBtn, passInput.type === 'text');
+            const visible = passInput.type === 'text';
+            toggleBtn.title = visible ? 'Hide password' : 'Show password';
+            toggleBtn.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
         });
 
         // ── Form Submit ──────────────────────────────────────

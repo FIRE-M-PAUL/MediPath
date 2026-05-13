@@ -62,7 +62,7 @@
                     <label for="admin-password">Secure Password</label>
                     <div class="password-field-wrap">
                         <input type="password" id="admin-password" class="form-control" required placeholder="••••••••">
-                        <button type="button" id="toggle-admin-password" class="toggle-password-btn" aria-label="Show password" title="Show password">👁️</button>
+                        <button type="button" id="toggle-admin-password" class="toggle-password-btn" aria-label="Show password" title="Show password"></button>
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; border-radius: var(--radius-sm); font-weight: 700;">
@@ -82,13 +82,17 @@
     <script>
         const adminPasswordInput = document.getElementById('admin-password');
         const toggleAdminPasswordBtn = document.getElementById('toggle-admin-password');
+        if (window.MediPathPasswordToggle) {
+            MediPathPasswordToggle.setIcon(toggleAdminPasswordBtn, adminPasswordInput.type === 'text');
+        }
 
         toggleAdminPasswordBtn.addEventListener('click', () => {
             const isPassword = adminPasswordInput.type === 'password';
             adminPasswordInput.type = isPassword ? 'text' : 'password';
-            toggleAdminPasswordBtn.textContent = isPassword ? '🙈' : '👁️';
-            toggleAdminPasswordBtn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
-            toggleAdminPasswordBtn.title = isPassword ? 'Hide password' : 'Show password';
+            if (window.MediPathPasswordToggle) MediPathPasswordToggle.setIcon(toggleAdminPasswordBtn, adminPasswordInput.type === 'text');
+            const visible = adminPasswordInput.type === 'text';
+            toggleAdminPasswordBtn.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
+            toggleAdminPasswordBtn.title = visible ? 'Hide password' : 'Show password';
         });
 
         document.getElementById('admin-login-form').addEventListener('submit', async (e) => {

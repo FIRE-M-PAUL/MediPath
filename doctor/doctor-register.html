@@ -109,8 +109,7 @@
                         <div style="position: relative;">
                             <input type="password" id="password" class="form-control" required minlength="8" style="padding-right: 2.75rem;">
                             <button type="button" class="password-toggle" data-target="password" aria-label="Show password" title="Show password"
-                                style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); border: none; background: transparent; cursor: pointer; color: var(--text-light); font-size: 1rem; line-height: 1;">
-                                👁
+                                style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); border: none; background: transparent; cursor: pointer; color: var(--text-light); line-height: 1;">
                             </button>
                         </div>
                     </div>
@@ -119,8 +118,7 @@
                         <div style="position: relative;">
                             <input type="password" id="confirm-password" class="form-control" required style="padding-right: 2.75rem;">
                             <button type="button" class="password-toggle" data-target="confirm-password" aria-label="Show password" title="Show password"
-                                style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); border: none; background: transparent; cursor: pointer; color: var(--text-light); font-size: 1rem; line-height: 1;">
-                                👁
+                                style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); border: none; background: transparent; cursor: pointer; color: var(--text-light); line-height: 1;">
                             </button>
                         </div>
                     </div>
@@ -169,15 +167,21 @@
         }
 
         document.querySelectorAll('.password-toggle').forEach((btn) => {
+            const targetId = btn.getAttribute('data-target');
+            const input = targetId ? document.getElementById(targetId) : null;
+            if (input && window.MediPathPasswordToggle) {
+                MediPathPasswordToggle.setIcon(btn, input.type === 'text');
+            }
             btn.addEventListener('click', () => {
-                const targetId = btn.getAttribute('data-target');
-                const input = document.getElementById(targetId);
-                if (!input) return;
-                const show = input.type === 'password';
-                input.type = show ? 'text' : 'password';
-                btn.textContent = show ? '🙈' : '👁';
-                btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
-                btn.setAttribute('title', show ? 'Hide password' : 'Show password');
+                const tid = btn.getAttribute('data-target');
+                const inp = document.getElementById(tid);
+                if (!inp) return;
+                const show = inp.type === 'password';
+                inp.type = show ? 'text' : 'password';
+                if (window.MediPathPasswordToggle) MediPathPasswordToggle.setIcon(btn, inp.type === 'text');
+                const visible = inp.type === 'text';
+                btn.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
+                btn.setAttribute('title', visible ? 'Hide password' : 'Show password');
             });
         });
 
