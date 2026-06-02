@@ -539,14 +539,17 @@
                             <div class="input-wrapper">
                                 <span class="input-icon">📞</span>
                                 <input type="tel" id="reg-phone" name="phone"
-                                    placeholder="e.g. 0771234567"
+                                    placeholder="e.g. 0771234567 (Zamtel/MTN/Airtel)"
                                     autocomplete="tel"
                                     aria-describedby="phone-error"
                                     aria-required="true"
-                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')" pattern="\d*">
+                                    maxlength="10"
+                                    oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,10)"
+                                    pattern="(095|096|097|076|077)\d{7}"
+                                    title="Enter a 10-digit Zambian mobile number starting with 095, 096, 097, 076, or 077">
                             </div>
                             <span class="error-msg" id="phone-error" role="alert">
-                                ❌ <span id="phone-error-text">Phone must be at least 10 digits</span>
+                                ❌ <span id="phone-error-text">Phone must be 10 digits and start with 095, 096, 097, 076, or 077</span>
                             </span>
                         </div>
                     </div>
@@ -557,7 +560,7 @@
                         <div class="input-wrapper">
                             <span class="input-icon">🔒</span>
                             <input type="password" id="reg-password" name="password"
-                                placeholder="At least 6 characters"
+                                placeholder="8+ chars, upper, lower, number"
                                 autocomplete="new-password"
                                 aria-describedby="reg-pass-error"
                                 aria-required="true"
@@ -573,7 +576,7 @@
                             <span class="strength-label" id="strength-label">Weak</span>
                         </div>
                         <span class="error-msg" id="reg-pass-error" role="alert">
-                            ❌ <span id="reg-pass-error-text">Password must be at least 6 characters</span>
+                            ❌ <span id="reg-pass-error-text">Password must be at least 8 characters with upper, lower, and a number</span>
                         </span>
                     </div>
 
@@ -679,15 +682,21 @@
             return '';
         }
         function validatePhone(v) {
+            if (window.MediPathPhone) return MediPathPhone.validate(v);
             const digits = v.replace(/\D/g, '');
-            if (!digits)          return 'Please enter your phone number.';
-            if (digits.length < 10) return 'Phone number must be at least 10 digits.';
-            if (!/^\d+$/.test(digits)) return 'Phone number must contain numbers only.';
+            if (!digits) return 'Please enter your phone number.';
+            if (digits.length !== 10) return 'Phone number must be exactly 10 digits.';
+            if (!/^(095|096|097|076|077)\d{7}$/.test(digits)) {
+                return 'Phone must start with 095, 096, 097, 076, or 077.';
+            }
             return '';
         }
         function validatePassword(v) {
             if (!v)           return 'Please enter a password.';
-            if (v.length < 6) return 'Password must be at least 6 characters.';
+            if (v.length < 8) return 'Password must be at least 8 characters.';
+            if (!/[a-z]/.test(v)) return 'Password must include a lowercase letter.';
+            if (!/[A-Z]/.test(v)) return 'Password must include an uppercase letter.';
+            if (!/\d/.test(v))    return 'Password must include a number.';
             return '';
         }
         function validateConfirm(v) {
@@ -746,11 +755,20 @@
             else     clearError(emailInput, document.getElementById('reg-email-error'));
         });
 
-        phoneInput.addEventListener('blur', () => {
-            const err = validatePhone(phoneInput.value);
-            if (err) showError(phoneInput, document.getElementById('phone-error'), document.getElementById('phone-error-text'), err);
-            else     clearError(phoneInput, document.getElementById('phone-error'));
-        });
+        if (window.MediPathPhone) {
+            MediPathPhone.attachLiveInput(phoneInput, {
+                errorTextEl: document.getElementById('phone-error-text'),
+                errorContainerEl: document.getElementById('phone-error'),
+                onError: () => phoneInput.setAttribute('aria-invalid', 'true'),
+                onClear: () => phoneInput.setAttribute('aria-invalid', 'false')
+            });
+        } else {
+            phoneInput.addEventListener('blur', () => {
+                const err = validatePhone(phoneInput.value);
+                if (err) showError(phoneInput, document.getElementById('phone-error'), document.getElementById('phone-error-text'), err);
+                else     clearError(phoneInput, document.getElementById('phone-error'));
+            });
+        }
 
         passInput.addEventListener('blur', () => {
             const err = validatePassword(passInput.value);
@@ -764,8 +782,8 @@
             else     clearError(confirmInput, document.getElementById('confirm-error'));
         });
 
-        // Clear errors live
-        [nameInput, emailInput, phoneInput, passInput, confirmInput].forEach(inp => {
+        // Clear errors live (phone handled by MediPathPhone.attachLiveInput)
+        [nameInput, emailInput, passInput, confirmInput].forEach(inp => {
             inp.addEventListener('input', () => {
                 if (inp.classList.contains('input-error')) {
                     let err = '';
@@ -846,14 +864,15 @@
             const userData = {
                 name: nameInput.value.trim(),
                 email: emailInput.value.trim(),
-                phone: phoneInput.value.trim(),
+                phone: (window.MediPathPhone ? MediPathPhone.normalize(phoneInput.value) : phoneInput.value.trim()),
                 password: passInput.value
             };
 
-            const success = await Auth.register(userData, 'patient');
+            const result = await Auth.register(userData, 'patient');
+            const success = !!(result && result.success);
+            const serverMsg = (result && result.message) ? String(result.message) : '';
 
             if (success) {
-                // Show success overlay
                 const overlay = document.getElementById('success-overlay');
                 overlay.classList.add('show');
                 requestAnimationFrame(() => {
@@ -865,9 +884,44 @@
                 btn.disabled          = false;
                 btnText.textContent   = '🚀 Create Account';
                 spinner.style.display = 'none';
-                
-                // Display specific error if existing
-                showError(emailInput, document.getElementById('reg-email-error'), document.getElementById('reg-email-error-text'), 'This email is already registered or invalid. Please try another.');
+
+                const lower = serverMsg.toLowerCase();
+                if (lower.includes('email') && (lower.includes('registered') || lower.includes('exist') || lower.includes('conflict'))) {
+                    showError(
+                        emailInput,
+                        document.getElementById('reg-email-error'),
+                        document.getElementById('reg-email-error-text'),
+                        serverMsg || 'This email is already registered. Please sign in or use another email.'
+                    );
+                } else if (lower.includes('password')) {
+                    showError(
+                        passInput,
+                        document.getElementById('reg-pass-error'),
+                        document.getElementById('reg-pass-error-text'),
+                        serverMsg || 'Password must be at least 8 characters and include uppercase, lowercase, and a number.'
+                    );
+                } else if (lower.includes('phone') || lower.includes('zambian mobile')) {
+                    showError(
+                        phoneInput,
+                        document.getElementById('phone-error'),
+                        document.getElementById('phone-error-text'),
+                        serverMsg || 'Invalid phone number.'
+                    );
+                } else if (lower.includes('email')) {
+                    showError(
+                        emailInput,
+                        document.getElementById('reg-email-error'),
+                        document.getElementById('reg-email-error-text'),
+                        serverMsg || 'Invalid email address.'
+                    );
+                } else {
+                    if (typeof showToast === 'function') {
+                        showToast(serverMsg || 'Registration could not be completed. Please try again.', 'error');
+                    } else {
+                        alert(serverMsg || 'Registration could not be completed. Please try again.');
+                    }
+                }
+
                 form.classList.add('form-shake');
                 setTimeout(() => form.classList.remove('form-shake'), 450);
             }

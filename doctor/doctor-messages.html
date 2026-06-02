@@ -46,6 +46,7 @@
             <ul class="sidebar-menu">
                 <li><a href="doctor-dashboard.html" class="sidebar-link">📊 Dashboard Overview</a></li>
                 <li><a href="doctor-appointments.html" class="sidebar-link">📅 Patient Appointments</a></li>
+                <li><a href="doctor-patients.html" class="sidebar-link">🧑‍⚕️ My Patients</a></li>
                 <li><a href="doctor-messages.html" class="sidebar-link active">💬 Consultations / Messages</a></li>
                 <li><a href="doctor-profile.html" class="sidebar-link">👤 Professional Profile</a></li>
             </ul>
@@ -95,7 +96,22 @@
             const doc = Auth.getUser();
             const activeNameEl = document.getElementById('doc-active-name');
             if (activeNameEl && doc) activeNameEl.textContent = doc.name || 'Doctor';
-            await loadPatientList(true);
+
+            const params = new URLSearchParams(window.location.search);
+            const preselectId = Number(params.get('patient_id') || 0);
+            const preselectName = params.get('patient_name') || '';
+
+            if (preselectId > 0) {
+                activePatientId = preselectId;
+            }
+
+            await loadPatientList(!preselectId);
+
+            if (preselectId > 0) {
+                const match = patientCache.find((p) => Number(p.id) === preselectId);
+                const name = match ? match.name : (preselectName || `Patient #${preselectId}`);
+                openChat(preselectId, name);
+            }
         });
 
         async function loadPatientList(autoOpenFirst = false) {

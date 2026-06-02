@@ -829,12 +829,12 @@
                     <div class="stat-num" id="dash-available-doctors">0</div>
                     <div class="stat-title">Available Doctors</div>
                 </div>
-                <div class="stat-card stat-purple" style="cursor:pointer;" onclick="window.location.href='user/messages.html'">
+                <div class="stat-card stat-purple" style="cursor:pointer;" onclick="window.location.href='messages.html'">
                     <div class="stat-icon-wrap">💬</div>
                     <div class="stat-num" id="dash-messages">0</div>
                     <div class="stat-title">New Messages</div>
                 </div>
-                <div class="stat-card stat-red" style="cursor:pointer;" onclick="window.location.href='user/alerts.html'" title="Open alerts">
+                <div class="stat-card stat-red" style="cursor:pointer;" onclick="window.location.href='alerts.html'" title="Open alerts">
                     <div class="stat-icon-wrap">🚨</div>
                     <div class="stat-num" id="dash-alerts">0</div>
                     <div class="stat-title">Alerts</div>
@@ -856,7 +856,7 @@
                     <div class="action-icon-wrap">📅</div>
                     <span class="action-label">Book Appointment</span>
                 </a>
-                <a href="user/messages.html" class="action-card ac-yellow" id="act-messages">
+                <a href="messages.html" class="action-card ac-yellow" id="act-messages">
                     <div class="action-icon-wrap">💬</div>
                     <span class="action-label">Messages</span>
                 </a>
@@ -1162,7 +1162,7 @@
                 return;
             }
             const params = new URLSearchParams({ doctor_id: String(id), doctor_name: String(doctorName || 'Doctor') });
-            window.location.href = `user/messages.html?${params.toString()}`;
+            window.location.href = `messages.html?${params.toString()}`;
         };
 
         // ── 6. Helpers ───────────────────────────────────────────

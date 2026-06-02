@@ -31,6 +31,7 @@
             <ul class="sidebar-menu">
                 <li><a href="doctor-dashboard.html" class="sidebar-link">📊 Dashboard Overview</a></li>
                 <li><a href="doctor-appointments.html" class="sidebar-link">📅 Patient Appointments</a></li>
+                <li><a href="doctor-patients.html" class="sidebar-link">🧑‍⚕️ My Patients</a></li>
                 <li><a href="doctor-messages.html" class="sidebar-link">💬 Consultations / Messages</a></li>
                 <li><a href="doctor-profile.html" class="sidebar-link active">👤 Professional Profile</a></li>
             </ul>
@@ -66,7 +67,12 @@
                             <div class="form-group">
                                 <label for="phone">Phone Number</label>
                                 <input type="tel" id="phone" class="form-control" required
-                                       oninput="this.value = this.value.replace(/[^0-9]/g, '')" pattern="\d*">
+                                       placeholder="e.g. 0971234567 (Zamtel/MTN/Airtel)"
+                                       maxlength="10"
+                                       inputmode="numeric"
+                                       pattern="(095|096|076|097|077)\d{7}"
+                                       title="Enter a 10-digit Zambian mobile number starting with 095, 096, 076, 097, or 077">
+                                <small id="phone-error-text" style="display:block;color:var(--danger-color,#ef4444);margin-top:0.35rem;font-size:0.8rem;font-weight:600;"></small>
                             </div>
                         </div>
 
@@ -204,6 +210,11 @@
             if (fullnameEl) fullnameEl.value = doc.name || '';
             if (emailEl) emailEl.value = doc.email || '';
             if (phoneEl) phoneEl.value = doc.phone || '';
+            if (phoneEl && window.MediPathPhone) {
+                MediPathPhone.attachLiveInput(phoneEl, {
+                    errorTextEl: document.getElementById('phone-error-text')
+                });
+            }
             if (specialtyEl) specialtyEl.value = doc.specialty || '';
             if (hospitalEl) hospitalEl.value = doc.hospital || '';
             if (experienceEl) experienceEl.value = doc.experience || 0;
@@ -236,9 +247,15 @@
                 e.preventDefault();
                 const user = Auth.getUser();
                 
+                const rawPhone = document.getElementById('phone').value;
+                const phoneError = window.MediPathPhone ? MediPathPhone.validate(rawPhone) : '';
+                if (phoneError) {
+                    showToast(phoneError, 'error');
+                    return;
+                }
                 const updates = {
                     name:      document.getElementById('fullname').value,
-                    phone:     document.getElementById('phone').value,
+                    phone:     window.MediPathPhone ? MediPathPhone.normalize(rawPhone) : rawPhone,
                     hospital:  document.getElementById('hospital').value,
                     experience:document.getElementById('experience').value,
                     is_active: isDoctorActive,

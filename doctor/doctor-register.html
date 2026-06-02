@@ -54,8 +54,13 @@
                 <div class="grid-2 mt-1" style="gap: 1.5rem;">
                     <div class="form-group">
                         <label for="phone">Phone Number</label>
-                        <input type="tel" id="phone" class="form-control" required placeholder="09xxxxxxxx"
-                               oninput="this.value = this.value.replace(/[^0-9]/g, '')" pattern="\d*">
+                        <input type="tel" id="phone" class="form-control" required
+                               placeholder="e.g. 0971234567 (Zamtel/MTN/Airtel)"
+                               maxlength="10"
+                               inputmode="numeric"
+                               pattern="(095|096|076|097|077)\d{7}"
+                               title="Enter a 10-digit Zambian mobile number starting with 095, 096, 076, 097, or 077">
+                        <small class="error-msg" id="phone-error-text" style="display:block;color:var(--danger-color,#ef4444);margin-top:0.35rem;font-size:0.8rem;font-weight:600;"></small>
                     </div>
                     <div class="form-group">
                         <label for="license">Medical License Number</label>
@@ -156,6 +161,13 @@
         const registerForm = document.getElementById('doctor-register-form');
         const specialtySelect = document.getElementById('specialty');
         const customSpecialtyInput = document.getElementById('custom-specialty');
+        const docPhoneInput = document.getElementById('phone');
+        const docPhoneErrorEl = document.getElementById('phone-error-text');
+        if (docPhoneInput && window.MediPathPhone) {
+            MediPathPhone.attachLiveInput(docPhoneInput, {
+                errorTextEl: docPhoneErrorEl
+            });
+        }
 
         if (specialtySelect && customSpecialtyInput) {
             specialtySelect.addEventListener('change', () => {
@@ -191,7 +203,8 @@
                 
                 const name        = document.getElementById('fullname').value.trim();
                 const email       = document.getElementById('email').value.trim();
-                const phone       = document.getElementById('phone').value.trim();
+                const phoneRaw    = document.getElementById('phone').value.trim();
+                const phone       = (window.MediPathPhone ? MediPathPhone.normalize(phoneRaw) : phoneRaw);
                 const license     = document.getElementById('license').value.trim();
                 const specialtyChoice = document.getElementById('specialty').value;
                 const customSpecialty = customSpecialtyInput ? customSpecialtyInput.value.trim() : '';
@@ -205,6 +218,8 @@
                 // Validation
                 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
                 if (!emailRegex.test(email)) { showToast('Please enter a valid email address.', 'error'); return; }
+                const phoneError = window.MediPathPhone ? MediPathPhone.validate(phone) : '';
+                if (phoneError) { showToast(phoneError, 'error'); return; }
                 if (p1 !== p2)               { showToast('Passwords do not match!', 'error'); return; }
                 if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(p1)) {
                     showToast('Password must be at least 8 characters and include uppercase, lowercase, and a number.', 'error');

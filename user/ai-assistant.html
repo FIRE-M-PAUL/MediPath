@@ -148,7 +148,7 @@
                     <li><a href="index.html#services"  class="nav-item" data-page="services">Services</a></li>
                     <li><a href="doctors.html"         class="nav-item" data-page="doctors">Find Doctor</a></li>
                     <li><a href="appointments.html"    class="nav-item" data-page="appointments">Appointments</a></li>
-                    <li><a href="index.html#emergency" class="nav-item emergency-link" data-page="emergency">🚨 Emergency</a></li>
+                    <li><a href="emergency.html" class="nav-item emergency-link" data-page="emergency">🚨 Emergency</a></li>
                     <li><a href="contact.html"         class="nav-item" data-page="contact">Contact</a></li>
                 </ul>
                 <div class="nav-auth" id="nav-auth">
@@ -304,7 +304,7 @@
             if (t) t.remove();
         }
 
-        function sendMessage() {
+        async function sendMessage() {
             const input    = document.getElementById('symptom-input');
             const message  = input.value.trim();
             if (!message) return;
@@ -313,23 +313,34 @@
             input.value = '';
 
             addTypingIndicator();
-            API.analyzeSymptoms(message).then((result) => {
+            try {
+                const result = await API.analyzeSymptoms(message);
                 removeTypingIndicator();
                 if (!result || result.success === false) {
                     const fallback = getAIResponse(message);
                     addBubble(fallback.reply);
+                    if (fallback.emergency) {
+                        addBubble('🚨 <strong>EMERGENCY ALERT:</strong> Please seek immediate medical attention.');
+                        setTimeout(() => { window.location.href = 'emergency.html'; }, 1500);
+                    }
                     return;
                 }
+                const specialist = result.specialist || result.recommended_specialist || 'General Practitioner';
+                const advice = result.advice || result.action || result.reason || 'Consult a healthcare professional.';
                 addBubble(
-                    `🩺 <strong>Urgency:</strong> ${result.urgency}<br>` +
-                    `👨‍⚕️ <strong>Recommended Specialist:</strong> ${result.specialist}<br>` +
-                    `📌 <strong>Advice:</strong> ${result.advice}`
+                    `🩺 <strong>Urgency:</strong> ${result.urgency || 'Moderate'}<br>` +
+                    `👨‍⚕️ <strong>Recommended Specialist:</strong> ${specialist}<br>` +
+                    `📌 <strong>Advice:</strong> ${advice}`
                 );
                 if (result.emergency) {
                     addBubble('🚨 <strong>EMERGENCY ALERT:</strong> Please seek immediate medical attention.');
                     setTimeout(() => { window.location.href = 'emergency.html'; }, 1500);
                 }
-            });
+            } catch (_) {
+                removeTypingIndicator();
+                const fallback = getAIResponse(message);
+                addBubble(fallback.reply);
+            }
         }
 
         function sendSuggestion(text) {

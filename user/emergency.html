@@ -134,6 +134,28 @@
 
         .emer-action-btn:hover { background: #b91c1c; color: white; transform: translateY(-1px); }
 
+        .emer-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            background: rgba(0,0,0,0.65);
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .emer-modal.open { display: flex; }
+
+        .emer-modal-card {
+            background: var(--surface-color);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+        }
+
         @media (max-width: 768px) {
             .emergency-hero { padding: 3.5rem 0 3rem; }
         }
@@ -142,7 +164,6 @@
 
 <body>
 
-    <!-- NAVBAR -->
     <header>
         <nav class="navbar" id="main-navbar" role="navigation">
             <div class="nav-container">
@@ -154,6 +175,7 @@
                     <li><a href="doctors.html"     class="nav-item" data-page="doctors">Find Doctor</a></li>
                     <li><a href="appointments.html" class="nav-item" data-page="appointments">Appointments</a></li>
                     <li><a href="ai-assistant.html" class="nav-item" data-page="ai-assistant">AI Assistant</a></li>
+                    <li><a href="emergency.html" class="nav-item emergency-link active" data-page="emergency">🚨 Emergency</a></li>
                     <li><a href="contact.html"     class="nav-item" data-page="contact">Contact</a></li>
                 </ul>
                 <div class="nav-auth" id="nav-auth"></div>
@@ -167,34 +189,32 @@
         </nav>
     </header>
 
-    <!-- EMERGENCY HERO -->
     <section class="emergency-hero">
         <div class="container" style="position:relative; z-index:1;">
             <span class="emer-icon">🚨</span>
             <h1 class="emer-title">Emergency Medical Help</h1>
             <p class="emer-desc">
-                If you are experiencing a life-threatening emergency, call 911 immediately. Do not wait — every second counts.
+                If you are experiencing a life-threatening emergency, call emergency services immediately. Do not wait — every second counts.
             </p>
-            <a href="tel:911" class="call-btn" aria-label="Call 911 emergency services">
-                📞 CALL 911 NOW
-            </a>
+            <button type="button" class="call-btn" id="call-911-btn" aria-label="Call emergency services">
+                📞 CALL EMERGENCY (911)
+            </button>
         </div>
     </section>
 
-    <!-- EMERGENCY SERVICES GRID -->
     <div class="container">
         <div class="emergency-grid">
             <div class="emer-card">
                 <span class="emer-card-icon">🏥</span>
                 <h3>Find Nearest ER</h3>
                 <p>Locate the nearest emergency room or urgent care center using your current location.</p>
-                <a href="contact.html" class="emer-action-btn">📍 Find ER Near Me</a>
+                <button type="button" class="emer-action-btn" onclick="findNearestER()">📍 Find ER Near Me</button>
             </div>
             <div class="emer-card">
                 <span class="emer-card-icon">👨‍⚕️</span>
                 <h3>Emergency Specialist</h3>
                 <p>Connect with an on-call emergency specialist who can provide immediate guidance.</p>
-                <a href="doctors.html" class="emer-action-btn">🩺 Call Specialist</a>
+                <a href="doctors.html" class="emer-action-btn">🩺 Find Specialist</a>
             </div>
             <div class="emer-card">
                 <span class="emer-card-icon">🔍</span>
@@ -211,10 +231,81 @@
         </div>
     </div>
 
+    <div class="emer-modal" id="emer-modal" role="dialog" aria-modal="true" aria-labelledby="emer-modal-title">
+        <div class="emer-modal-card">
+            <h3 id="emer-modal-title" style="margin-bottom: 0.75rem; color: #dc2626;">🚨 Emergency</h3>
+            <p id="emer-modal-body" class="text-light" style="margin-bottom: 1.25rem;"></p>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap; justify-content:center;">
+                <a href="tel:911" class="btn btn-accent" id="emer-modal-call">📞 Call 911</a>
+                <button type="button" class="btn btn-outline" onclick="closeEmerModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <footer class="disclaimer" style="margin-top:auto;">
         ⚠️ In a life-threatening emergency, ALWAYS call 911 or your local emergency number immediately.
     </footer>
 
     <script src="/script.js"></script>
+    <script>
+        const EMERGENCY_NUMBER = '911';
+
+        function openEmerModal(message) {
+            const modal = document.getElementById('emer-modal');
+            const body = document.getElementById('emer-modal-body');
+            if (body) body.textContent = message;
+            if (modal) modal.classList.add('open');
+        }
+
+        function closeEmerModal() {
+            const modal = document.getElementById('emer-modal');
+            if (modal) modal.classList.remove('open');
+        }
+
+        function triggerEmergencyCall() {
+            const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+            if (isMobile) {
+                window.location.href = `tel:${EMERGENCY_NUMBER}`;
+                return;
+            }
+            openEmerModal(
+                `On this device, dial ${EMERGENCY_NUMBER} now for life-threatening emergencies. ` +
+                'You can also use the Call button below if your system supports phone links.'
+            );
+            if (typeof showToast === 'function') {
+                showToast(`Dial ${EMERGENCY_NUMBER} immediately for emergencies.`, 'error');
+            }
+        }
+
+        function findNearestER() {
+            if (!navigator.geolocation) {
+                window.location.href = 'contact.html';
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const { latitude, longitude } = pos.coords;
+                    const mapsUrl = `https://www.google.com/maps/search/emergency+room+near+me/@${latitude},${longitude},14z`;
+                    window.open(mapsUrl, '_blank', 'noopener');
+                    if (typeof showToast === 'function') {
+                        showToast('Opening nearby emergency facilities…', 'info');
+                    }
+                },
+                () => {
+                    window.location.href = 'contact.html';
+                    if (typeof showToast === 'function') {
+                        showToast('Location unavailable — showing contact options.', 'error');
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+
+        document.getElementById('call-911-btn')?.addEventListener('click', triggerEmergencyCall);
+        document.getElementById('emer-modal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'emer-modal') closeEmerModal();
+        });
+    </script>
 </body>
+
 </html>

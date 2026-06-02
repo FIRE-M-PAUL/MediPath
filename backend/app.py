@@ -148,7 +148,7 @@ def serve_static(path):
         return send_from_directory(APP_DIR, path)
     doctor_pages = {
         'doctor-login.html', 'doctor-register.html', 'doctor-dashboard.html',
-        'doctor-appointments.html', 'doctor-messages.html', 'doctor-profile.html',
+        'doctor-appointments.html', 'doctor-patients.html', 'doctor-messages.html', 'doctor-profile.html',
         'doctor-pending.html'
     }
     user_pages = {
@@ -173,15 +173,35 @@ def serve_static(path):
 
 # --- Robust Validation Layer ---
 EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-PHONE_REGEX = r'^\d{10,15}$'
 PASSWORD_REGEX = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$'
+
+# Zambian mobile number rules:
+#   - exactly 10 digits, numeric only
+#   - must start with 095 (Zamtel), 096/076 (MTN), or 097/077 (Airtel)
+PHONE_ALLOWED_PREFIXES = ('095', '096', '076', '097', '077')
+PHONE_REGEX = r'^(?:' + '|'.join(PHONE_ALLOWED_PREFIXES) + r')\d{7}$'
+PHONE_VALIDATION_MESSAGE = (
+    'Invalid phone number. Please enter a valid Zambian mobile number '
+    'starting with 095, 096, 076, 097, or 077.'
+)
+
 
 def validate_email(email):
     return re.match(EMAIL_REGEX, email) is not None
 
 
+def _normalize_phone_digits(phone):
+    """Strip everything that is not a digit. Returns a possibly-empty string."""
+    return re.sub(r'\D', '', str(phone or ''))
+
+
 def validate_phone(phone):
-    return re.match(PHONE_REGEX, phone or '') is not None
+    """
+    True only for a 10-digit Zambian mobile number that begins with one of the
+    approved network prefixes.
+    """
+    digits = _normalize_phone_digits(phone)
+    return re.match(PHONE_REGEX, digits) is not None
 
 
 def validate_password(password):
@@ -324,6 +344,32 @@ def create_patient_notification(patient_id, message):
     db.session.add(note)
 
 
+def _notification_patient_id_for_appointment(row_patient_id):
+    """
+    Resolve an appointment.patient_id into NOTIFICATIONS.patient_id.
+
+    The shared appointments table can store patient_id in either namespace:
+    users.id for legacy rows, or PATIENT.patient_id for clinical rows. The
+    NOTIFICATIONS table always references PATIENT.patient_id.
+    """
+    if row_patient_id is None:
+        return None
+    try:
+        pid = int(row_patient_id)
+    except (TypeError, ValueError):
+        return None
+
+    if _legacy_appointments_fk_to_users():
+        portal_user = User.query.get(pid)
+        if not portal_user or portal_user.role != 'patient':
+            return None
+        clinical_patient = get_or_create_clinical_patient(portal_user)
+        return clinical_patient.patient_id if clinical_patient else None
+
+    clinical_patient = Patient.query.get(pid)
+    return clinical_patient.patient_id if clinical_patient else None
+
+
 def _split_user_display_name(name):
     parts = (name or '').strip().split()
     first = parts[0] if parts else 'Patient'
@@ -432,7 +478,7 @@ def ensure_clinical_doctors_seeded():
 
 # Password for Flask-Login doctor portal (must satisfy register() password rules).
 DEMO_DOCTOR_PORTAL_PASSWORD = 'DemoDoctor2026!'
-DEMO_MODE = os.getenv('MEDIPATH_DEMO_MODE', 'true').lower() == 'true'
+DEMO_MODE = os.getenv('MEDIPATH_DEMO_MODE', 'false').lower() == 'true'
 
 
 def ensure_demo_doctor_user_links():
@@ -599,6 +645,28 @@ def _portal_user_for_clinical_doctor(clinical_doctor_id):
     return User.query.filter_by(email=email, role='doctor').first()
 
 
+def _doctor_owns_appointment_doctor_id(user, row_doctor_id):
+    """
+    True only when `row_doctor_id` actually identifies THIS doctor.
+    Resolves the appointment doctor identifier back to one portal users.id.
+    """
+    if not user or getattr(user, 'role', None) != 'doctor':
+        return False
+    try:
+        doctor_id_val = int(row_doctor_id)
+        if _legacy_appointments_fk_to_users():
+            resolved_user_id = doctor_id_val
+        else:
+            doc = Doctor.query.get(doctor_id_val)
+            if not doc or not (doc.email or '').strip():
+                return False
+            portal = User.query.filter_by(email=(doc.email or '').strip(), role='doctor').first()
+            resolved_user_id = portal.id if portal else None
+        return resolved_user_id is not None and int(resolved_user_id) == int(user.id)
+    except (TypeError, ValueError):
+        return False
+
+
 def _clinical_appointment_row_authorized(row):
     """ORM ClinicalAppointment instance."""
     if current_user.role == 'admin':
@@ -611,19 +679,7 @@ def _clinical_appointment_row_authorized(row):
             return row.patient_id in (current_user.id, patient.patient_id)
         return row.patient_id == patient.patient_id
     if current_user.role == 'doctor':
-        prof = getattr(current_user, 'doctor_profile', None)
-        if not prof:
-            return False
-        # Support hybrid datasets where appointments.doctor_id may contain either
-        # users.id (legacy) or DOCTOR.doctor_id (relational) values.
-        allowed_ids = {int(current_user.id)}
-        if prof.clinical_doctor_id:
-            allowed_ids.add(int(prof.clinical_doctor_id))
-        try:
-            doctor_id_val = int(row.doctor_id)
-        except (TypeError, ValueError):
-            return False
-        return doctor_id_val in allowed_ids
+        return _doctor_owns_appointment_doctor_id(current_user, row.doctor_id)
     return False
 
 
@@ -639,6 +695,43 @@ def _normalize_clinical_status(value):
         'pending': 'Pending',
     }
     return aliases.get(str(value).strip().lower(), value)
+
+
+def _find_duplicate_clinical_appointment(patient_id, doctor_id, date_time_value, exclude_id=None):
+    """
+    Return an existing non-cancelled appointment for the same patient, doctor,
+    and exact time slot. Prevents double-booking from double-clicks or
+    duplicate API calls.
+    """
+    if patient_id is None or doctor_id is None or date_time_value is None:
+        return None
+    try:
+        pid = int(patient_id)
+        did = int(doctor_id)
+    except (TypeError, ValueError):
+        return None
+
+    dt = date_time_value
+    if hasattr(dt, 'tzinfo') and dt.tzinfo is not None:
+        dt = dt.replace(tzinfo=None)
+
+    q = ClinicalAppointment.query.filter(
+        ClinicalAppointment.patient_id == pid,
+        ClinicalAppointment.doctor_id == did,
+        ClinicalAppointment.date_time == dt,
+    )
+    if exclude_id is not None:
+        try:
+            q = q.filter(ClinicalAppointment.id != int(exclude_id))
+        except (TypeError, ValueError):
+            pass
+
+    for row in q.all():
+        st = (row.status or '').strip().lower()
+        if st in ('cancelled', 'rejected'):
+            continue
+        return row
+    return None
 
 
 def _patient_display_name_for_clinical_list(patient_id):
@@ -752,11 +845,12 @@ def register():
         data = request.json or {}
         file = None
 
-    name     = data.get('name')
-    email    = data.get('email')
+    name     = (data.get('name') or '').strip()
+    email    = (data.get('email') or '').strip().lower()
     password = data.get('password')
     role     = (data.get('role') or 'patient').strip().lower()
-    phone    = data.get('phone')
+    phone_raw = (data.get('phone') or '').strip()
+    phone    = _normalize_phone_digits(phone_raw) or None
 
     if role not in ('patient', 'doctor'):
         role = 'patient'
@@ -768,12 +862,12 @@ def register():
         return jsonify({'success': False, 'message': 'Invalid email format (e.g., student@gmail.com).'}), 400
 
     if phone and not validate_phone(phone):
-        return jsonify({'success': False, 'message': 'Invalid phone number.'}), 400
+        return jsonify({'success': False, 'message': PHONE_VALIDATION_MESSAGE}), 400
 
     if not validate_password(password):
         return jsonify({'success': False, 'message': 'Password must be at least 8 characters and include uppercase, lowercase, and a number.'}), 400
 
-    if User.query.filter_by(email=email).first():
+    if User.query.filter(db.func.lower(User.email) == email).first():
         return jsonify({'success': False, 'message': 'This email is already registered.'}), 409
 
     try:
@@ -944,9 +1038,10 @@ def doctor_profile_api():
     if data.get('name'):
         current_user.name = data['name'].strip()
     if data.get('phone'):
-        if not validate_phone(data['phone']):
-            return jsonify({'success': False, 'message': 'Invalid phone number.'}), 400
-        current_user.phone = data['phone'].strip()
+        phone_digits = _normalize_phone_digits(data['phone'])
+        if not validate_phone(phone_digits):
+            return jsonify({'success': False, 'message': PHONE_VALIDATION_MESSAGE}), 400
+        current_user.phone = phone_digits
     if data.get('hospital'):
         profile.hospital = str(data['hospital']).strip()
     if data.get('experience'):
@@ -1297,17 +1392,9 @@ def book_appointment():
     if not validate_iso_datetime(date_time_str):
         return jsonify({'success': False, 'message': 'Invalid date/time format.'}), 400
     date_time = datetime.fromisoformat(date_time_str)
+    if date_time.tzinfo is not None:
+        date_time = date_time.replace(tzinfo=None)
 
-    appt = Appointment(
-        patient_id=current_user.id,
-        doctor_id=int(doctor_id),
-        date_time=date_time,
-        reason=reason,
-        status='Pending'
-    )
-    db.session.add(appt)
-
-    # Mirror in required academic APPOINTMENTS table
     clinical_patient = get_or_create_clinical_patient(current_user)
     clinical_doctor = Doctor.query.filter(Doctor.doctor_id == int(doctor_id)).first()
     if not clinical_doctor:
@@ -1320,20 +1407,30 @@ def book_appointment():
         persist_pid, persist_did = current_user.id, portal_dr.id
     else:
         persist_pid, persist_did = clinical_patient.patient_id, clinical_doctor.doctor_id
-    clinical_appt = ClinicalAppointment(
+
+    duplicate = _find_duplicate_clinical_appointment(persist_pid, persist_did, date_time)
+    if duplicate:
+        return jsonify({
+            'success': False,
+            'message': 'You already have an appointment booked for this time slot.',
+            'appointment_id': duplicate.appointment_id,
+        }), 409
+
+    # Single insert — Appointment and ClinicalAppointment share the same SQLite table.
+    row = ClinicalAppointment(
         patient_id=persist_pid,
         doctor_id=persist_did,
         facility_id=facility.facility_id if facility else None,
         appointment_date=date_time.isoformat(),
         date_time=date_time,
         status='Pending',
-        notes=reason
+        notes=reason,
     )
-    db.session.add(clinical_appt)
+    db.session.add(row)
     create_patient_notification(clinical_patient.patient_id, 'Appointment booked successfully')
     log_system_action('APPOINTMENT_CREATE', f'Appointment with doctor_id={doctor_id}', current_user)
     db.session.commit()
-    return jsonify({'success': True, 'message': 'Appointment booked successfully.', 'id': appt.id})
+    return jsonify({'success': True, 'message': 'Appointment booked successfully.', 'id': row.appointment_id})
 
 @app.route('/api/appointments/<int:appt_id>/status', methods=['POST'])
 @login_required
@@ -1343,6 +1440,8 @@ def update_appointment_status(appt_id):
     if not appt:
         return jsonify({'success': False, 'message': 'Appointment not found.'}), 404
     if current_user.role not in ('doctor', 'admin'):
+        return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
+    if current_user.role == 'doctor' and appt.doctor_id != current_user.id:
         return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
     data = request.json
     appt.status = data.get('status', appt.status)
@@ -1521,7 +1620,10 @@ def update_doctor_profile(doctor_id):
 
     # Update User-level fields
     if data.get('phone'):
-        doctor.phone = data['phone']
+        phone_digits = _normalize_phone_digits(data['phone'])
+        if not validate_phone(phone_digits):
+            return jsonify({'success': False, 'message': PHONE_VALIDATION_MESSAGE}), 400
+        doctor.phone = phone_digits
 
     # Ensure profile exists
     if not doctor.doctor_profile:
@@ -1676,17 +1778,23 @@ def list_clinical_appointments():
             params = [patient.patient_id, current_user.id]
             select_sql += " ORDER BY appointment_date ASC"
         elif current_user.role == 'doctor':
-            profile = getattr(current_user, 'doctor_profile', None)
-            cid = profile.clinical_doctor_id if profile else None
-            if not current_user.id and not cid:
+            if not current_user.id:
                 return jsonify([])
-            # Support hybrid datasets by accepting both portal and clinical doctor ids.
-            if cid and int(cid) != int(current_user.id):
-                select_sql += f" WHERE {doctor_col} IN (?, ?)"
-                params = [current_user.id, cid]
-            else:
-                select_sql += f" WHERE {doctor_col} = ?"
-                params = [current_user.id]
+
+            candidates = {int(current_user.id)}
+            if not _legacy_appointments_fk_to_users():
+                candidates = set()
+                email = (current_user.email or '').strip().lower()
+                if email:
+                    docs = Doctor.query.filter(db.func.lower(Doctor.email) == email).all()
+                    for d in docs:
+                        candidates.add(int(d.doctor_id))
+
+            if not candidates:
+                return jsonify([])
+            placeholders = ', '.join(['?'] * len(candidates))
+            select_sql += f" WHERE {doctor_col} IN ({placeholders})"
+            params = sorted(candidates)
             select_sql += " ORDER BY appointment_date DESC"
         elif current_user.role == 'admin':
             select_sql += " ORDER BY appointment_date DESC"
@@ -1699,6 +1807,13 @@ def list_clinical_appointments():
 
         out = []
         for r in rows:
+            if current_user.role == 'doctor':
+                class AppointmentRow:
+                    pass
+                auth_row = AppointmentRow()
+                auth_row.doctor_id = r['doctor_id']
+                if not _clinical_appointment_row_authorized(auth_row):
+                    continue
             ad = r['appointment_date']
             if ad is not None:
                 ad = str(ad)
@@ -1831,6 +1946,16 @@ def create_clinical_appointment():
             persist_patient_id = patient.patient_id
             persist_doctor_id = doctor.doctor_id
 
+        duplicate = _find_duplicate_clinical_appointment(
+            persist_patient_id, persist_doctor_id, date_time_value
+        )
+        if duplicate:
+            return jsonify({
+                'success': False,
+                'message': 'You already have an appointment booked for this time slot.',
+                'appointment_id': duplicate.appointment_id,
+            }), 409
+
         row = ClinicalAppointment(
             patient_id=persist_patient_id,
             doctor_id=persist_doctor_id,
@@ -1866,50 +1991,67 @@ def create_clinical_appointment():
 @app.route('/api/clinical/appointments/<int:appointment_id>', methods=['PUT'])
 @login_required
 def update_clinical_appointment(appointment_id):
-    row = ClinicalAppointment.query.get(appointment_id)
-    if not row:
-        return jsonify({'success': False, 'message': 'Appointment not found.'}), 404
-    if not _clinical_appointment_row_authorized(row):
-        return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
-    data = request.json or {}
-    if data.get('doctor_id'):
-        doctor = Doctor.query.get(int(data['doctor_id']))
-        if not doctor:
-            return jsonify({'success': False, 'message': 'Doctor must exist.'}), 400
-        if _legacy_appointments_fk_to_users():
-            portal_dr = _portal_user_for_clinical_doctor(doctor.doctor_id)
-            if not portal_dr:
-                return jsonify({'success': False, 'message': 'Doctor must have a linked portal account.'}), 400
-            row.doctor_id = portal_dr.id
-        else:
-            row.doctor_id = doctor.doctor_id
-    if data.get('facility_id') is not None:
-        if data['facility_id'] and not Facility.query.get(int(data['facility_id'])):
-            return jsonify({'success': False, 'message': 'Facility must exist.'}), 400
-        row.facility_id = int(data['facility_id']) if data['facility_id'] else None
-    if data.get('appointment_date'):
-        raw = data['appointment_date']
-        if not validate_iso_datetime(str(raw)):
-            return jsonify({'success': False, 'message': 'Invalid appointment date.'}), 400
-        try:
-            s = str(raw).strip()
-            if s.endswith('Z'):
-                s = s[:-1] + '+00:00'
-            dt = datetime.fromisoformat(s)
-            if dt.tzinfo is not None:
-                dt = dt.replace(tzinfo=None)
-            row.appointment_date = s
-            row.date_time = dt
-        except Exception:
-            return jsonify({'success': False, 'message': 'Invalid appointment_date.'}), 400
-    if data.get('status'):
-        row.status = _normalize_clinical_status(data['status'])
-        create_patient_notification(row.patient_id, f'Your appointment has been {row.status.lower()}')
-    if data.get('notes') is not None:
-        row.notes = data['notes']
-    log_system_action('APPOINTMENT_UPDATE', f'clinical_appointment_id={appointment_id}', current_user)
-    db.session.commit()
-    return jsonify({'success': True})
+    try:
+        row = ClinicalAppointment.query.get(appointment_id)
+        if not row:
+            return jsonify({'success': False, 'message': 'Appointment not found.'}), 404
+        if not _clinical_appointment_row_authorized(row):
+            return jsonify({'success': False, 'message': 'Unauthorized.'}), 403
+        data = request.json or {}
+        if data.get('doctor_id'):
+            doctor = Doctor.query.get(int(data['doctor_id']))
+            if not doctor:
+                return jsonify({'success': False, 'message': 'Doctor must exist.'}), 400
+            if _legacy_appointments_fk_to_users():
+                portal_dr = _portal_user_for_clinical_doctor(doctor.doctor_id)
+                if not portal_dr:
+                    return jsonify({'success': False, 'message': 'Doctor must have a linked portal account.'}), 400
+                row.doctor_id = portal_dr.id
+            else:
+                row.doctor_id = doctor.doctor_id
+        if data.get('facility_id') is not None:
+            if data['facility_id'] and not Facility.query.get(int(data['facility_id'])):
+                return jsonify({'success': False, 'message': 'Facility must exist.'}), 400
+            row.facility_id = int(data['facility_id']) if data['facility_id'] else None
+        if data.get('appointment_date'):
+            raw = data['appointment_date']
+            if not validate_iso_datetime(str(raw)):
+                return jsonify({'success': False, 'message': 'Invalid appointment date.'}), 400
+            try:
+                s = str(raw).strip()
+                if s.endswith('Z'):
+                    s = s[:-1] + '+00:00'
+                dt = datetime.fromisoformat(s)
+                if dt.tzinfo is not None:
+                    dt = dt.replace(tzinfo=None)
+                row.appointment_date = s
+                row.date_time = dt
+            except Exception:
+                return jsonify({'success': False, 'message': 'Invalid appointment_date.'}), 400
+        if data.get('status'):
+            row.status = _normalize_clinical_status(data['status'])
+            notify_patient_id = _notification_patient_id_for_appointment(row.patient_id)
+            if notify_patient_id:
+                create_patient_notification(
+                    notify_patient_id,
+                    f'Your appointment has been {row.status.lower()}',
+                )
+        if data.get('notes') is not None:
+            row.notes = data['notes']
+        log_system_action('APPOINTMENT_UPDATE', f'clinical_appointment_id={appointment_id}', current_user)
+        db.session.commit()
+        return jsonify({'success': True})
+    except IntegrityError as exc:
+        db.session.rollback()
+        print('[clinical/appointments PUT] IntegrityError:', exc)
+        return jsonify({
+            'success': False,
+            'message': 'Could not update appointment because related patient or doctor data is inconsistent.',
+        }), 409
+    except Exception as exc:
+        db.session.rollback()
+        print('[clinical/appointments PUT] error:', exc)
+        return jsonify({'success': False, 'message': str(exc)}), 500
 
 
 @app.route('/api/clinical/appointments/<int:appointment_id>', methods=['DELETE'])
@@ -1932,8 +2074,28 @@ def list_medical_records():
     if current_user.role == 'patient':
         patient = get_or_create_clinical_patient(current_user)
         rows = MedicalRecord.query.filter_by(patient_id=patient.patient_id).all()
+    elif current_user.role == 'doctor':
+        # Doctors only see records they authored. Resolve every id-namespace
+        # this doctor maps to so legacy/hybrid data still surfaces.
+        profile = getattr(current_user, 'doctor_profile', None)
+        doctor_ids = set()
+        if profile and profile.clinical_doctor_id:
+            doctor_ids.add(int(profile.clinical_doctor_id))
+        email = (current_user.email or '').strip().lower()
+        if email:
+            for d in Doctor.query.filter(db.func.lower(Doctor.email) == email).all():
+                doctor_ids.add(int(d.doctor_id))
+        if not doctor_ids:
+            rows = []
+        else:
+            rows = (
+                MedicalRecord.query
+                .filter(MedicalRecord.doctor_id.in_(doctor_ids))
+                .order_by(MedicalRecord.visit_date.desc())
+                .all()
+            )
     else:
-        rows = MedicalRecord.query.all()
+        rows = MedicalRecord.query.order_by(MedicalRecord.visit_date.desc()).all()
     return jsonify([{
         'record_id': r.record_id,
         'patient_id': r.patient_id,
@@ -2005,6 +2167,207 @@ def delete_medical_record(record_id):
     log_system_action('MEDICAL_RECORD_DELETE', f'record_id={record_id}', current_user)
     db.session.commit()
     return jsonify({'success': True})
+
+
+def _doctor_linked_patient_user_ids(doctor_user):
+    """
+    Portal User.id values for patients who have at least one appointment
+    with this doctor (any status). Used to scope doctor patient APIs.
+    """
+    if not doctor_user or doctor_user.role != 'doctor':
+        return set()
+
+    patient_ids = set()
+
+    for appt in Appointment.query.filter_by(doctor_id=doctor_user.id).all():
+        patient_ids.add(int(appt.patient_id))
+
+    clinical_rows = ClinicalAppointment.query.order_by(ClinicalAppointment.id.desc()).limit(500).all()
+    for appt in clinical_rows:
+        if not _clinical_appointment_row_authorized(appt):
+            continue
+        portal_patient = _portal_user_for_patient_identifier(appt.patient_id)
+        if portal_patient and portal_patient.role == 'patient':
+            patient_ids.add(int(portal_patient.id))
+
+    return patient_ids
+
+
+def _patient_profile_payload(portal_user, clinical_row=None):
+    """Build a safe patient profile dict for doctor-facing APIs."""
+    if clinical_row is None and portal_user and portal_user.email:
+        clinical_row = Patient.query.filter_by(email=(portal_user.email or '').strip()).first()
+    if not clinical_row and portal_user:
+        clinical_row = get_or_create_clinical_patient(portal_user)
+
+    full_name = (portal_user.name or '').strip() if portal_user else ''
+    if clinical_row:
+        clinical_name = f'{(clinical_row.first_name or "").strip()} {(clinical_row.last_name or "").strip()}'.strip()
+        if clinical_name:
+            full_name = clinical_name
+
+    return {
+        'id': portal_user.id if portal_user else None,
+        'clinical_patient_id': clinical_row.patient_id if clinical_row else None,
+        'name': full_name or 'Unknown Patient',
+        'email': (portal_user.email or '').strip() if portal_user else '',
+        'phone': (portal_user.phone or clinical_row.phone if clinical_row else '') or '',
+        'gender': (clinical_row.gender if clinical_row else '') or '',
+        'date_of_birth': (clinical_row.date_of_birth if clinical_row else '') or '',
+        'address': (clinical_row.address if clinical_row else '') or '',
+    }
+
+
+@app.route('/api/doctor/my-patients', methods=['GET'])
+@login_required
+@require_role('doctor')
+def doctor_my_patients():
+    """Patients who have booked at least one appointment with the logged-in doctor."""
+    linked_ids = _doctor_linked_patient_user_ids(current_user)
+    items = []
+    for pid in sorted(linked_ids):
+        user = User.query.get(pid)
+        if not user or user.role != 'patient':
+            continue
+        profile = _patient_profile_payload(user)
+        items.append({
+            'id': profile['id'],
+            'clinical_patient_id': profile['clinical_patient_id'],
+            'name': profile['name'],
+            'email': profile['email'],
+            'phone': profile['phone'],
+        })
+    items.sort(key=lambda x: (x.get('name') or '').lower())
+    return jsonify({'success': True, 'items': items, 'total': len(items)})
+
+
+@app.route('/api/doctor/patients/<int:patient_user_id>', methods=['GET'])
+@login_required
+@require_role('doctor')
+def doctor_get_patient(patient_user_id):
+    """Retrieve a single patient's profile by portal user id (doctor must be linked)."""
+    linked_ids = _doctor_linked_patient_user_ids(current_user)
+    if patient_user_id not in linked_ids:
+        return jsonify({
+            'success': False,
+            'message': 'You can only view patients who have an appointment with you.',
+        }), 403
+
+    user = User.query.get(patient_user_id)
+    if not user or user.role != 'patient':
+        return jsonify({'success': False, 'message': 'Patient not found.'}), 404
+
+    profile = _patient_profile_payload(user)
+    return jsonify({'success': True, 'patient': profile})
+
+
+@app.route('/api/doctor/patients/<int:patient_user_id>/appointments', methods=['GET'])
+@login_required
+@require_role('doctor')
+def doctor_patient_appointments(patient_user_id):
+    """All appointments between the logged-in doctor and one patient."""
+    linked_ids = _doctor_linked_patient_user_ids(current_user)
+    if patient_user_id not in linked_ids:
+        return jsonify({
+            'success': False,
+            'message': 'You can only view appointments for patients who have an appointment with you.',
+        }), 403
+
+    user = User.query.get(patient_user_id)
+    if not user or user.role != 'patient':
+        return jsonify({'success': False, 'message': 'Patient not found.'}), 404
+
+    clinical_patient = Patient.query.filter_by(email=(user.email or '').strip()).first() if user.email else None
+
+    items = []
+
+    legacy_rows = (
+        Appointment.query
+        .filter_by(doctor_id=current_user.id, patient_id=user.id)
+        .order_by(Appointment.date_time.desc())
+        .all()
+    )
+    for a in legacy_rows:
+        items.append({
+            'id': a.id,
+            'source': 'legacy',
+            'doctor_id': a.doctor_id,
+            'patient_id': a.patient_id,
+            'date_time': a.date_time.isoformat() if a.date_time else None,
+            'status': a.status,
+            'reason': a.reason or '',
+            'cancellation_reason': a.cancellation_reason or '',
+        })
+
+    seen_keys = {(int(a.id), 'legacy') for a in legacy_rows}
+    candidate_patient_ids = {int(user.id)}
+    if clinical_patient:
+        candidate_patient_ids.add(int(clinical_patient.patient_id))
+
+    clinical_rows = ClinicalAppointment.query.order_by(ClinicalAppointment.id.desc()).limit(500).all()
+    for row in clinical_rows:
+        if (int(row.id), 'legacy') in seen_keys:
+            continue
+        if not _clinical_appointment_row_authorized(row):
+            continue
+        if int(row.patient_id) not in candidate_patient_ids:
+            continue
+        items.append({
+            'id': row.id,
+            'source': 'clinical',
+            'doctor_id': row.doctor_id,
+            'patient_id': row.patient_id,
+            'date_time': row.date_time.isoformat() if row.date_time else None,
+            'appointment_date': row.appointment_date,
+            'status': row.status,
+            'reason': row.notes or '',
+            'facility_id': row.facility_id,
+        })
+
+    def _sort_key(it):
+        return it.get('date_time') or it.get('appointment_date') or ''
+    items.sort(key=_sort_key, reverse=True)
+    return jsonify({'success': True, 'items': items, 'total': len(items)})
+
+
+@app.route('/api/doctor/patients/<int:patient_user_id>/medical-records', methods=['GET'])
+@login_required
+@require_role('doctor')
+def doctor_patient_medical_records(patient_user_id):
+    """Medical records for one patient, only if linked to the logged-in doctor."""
+    linked_ids = _doctor_linked_patient_user_ids(current_user)
+    if patient_user_id not in linked_ids:
+        return jsonify({
+            'success': False,
+            'message': 'You can only view records for patients who have an appointment with you.',
+        }), 403
+
+    user = User.query.get(patient_user_id)
+    if not user or user.role != 'patient':
+        return jsonify({'success': False, 'message': 'Patient not found.'}), 404
+
+    clinical_row = Patient.query.filter_by(email=(user.email or '').strip()).first() if user.email else None
+    if not clinical_row:
+        clinical_row = get_or_create_clinical_patient(user)
+    if not clinical_row:
+        return jsonify({'success': True, 'items': [], 'total': 0})
+
+    rows = (
+        MedicalRecord.query
+        .filter_by(patient_id=clinical_row.patient_id)
+        .order_by(MedicalRecord.visit_date.desc())
+        .all()
+    )
+    items = [{
+        'record_id': r.record_id,
+        'patient_id': r.patient_id,
+        'doctor_id': r.doctor_id,
+        'diagnosis': r.diagnosis or '',
+        'prescription': r.prescription or '',
+        'treatment': r.treatment or '',
+        'visit_date': r.visit_date,
+    } for r in rows]
+    return jsonify({'success': True, 'items': items, 'total': len(items)})
 
 
 @app.route('/api/notifications', methods=['GET'])
@@ -2156,7 +2519,6 @@ def recent_activity():
 
 
 @app.route('/api/symptom-analyze', methods=['POST'])
-@login_required
 def symptom_analyze():
     data = request.json or {}
     raw_input = ((data.get('symptoms') or data.get('question') or data.get('text') or '')).strip().lower()
@@ -2164,8 +2526,14 @@ def symptom_analyze():
         return jsonify({'success': False, 'message': 'Symptoms are required.'}), 400
 
     kb_path = os.path.join(APP_DIR, 'backend', 'knowledge_base.json')
-    with open(kb_path, 'r', encoding='utf-8') as kb_file:
-        kb_data = json.load(kb_file)
+    if not os.path.exists(kb_path):
+        kb_path = os.path.join(os.path.dirname(__file__), 'knowledge_base.json')
+    try:
+        with open(kb_path, 'r', encoding='utf-8') as kb_file:
+            kb_data = json.load(kb_file)
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f'[symptom-analyze] knowledge base error: {exc}')
+        return jsonify({'success': False, 'message': 'Symptom knowledge base unavailable.'}), 500
 
     normalized_text = ' '.join(raw_input.replace(',', ' ').replace('.', ' ').split())
     symptom_aliases = {
@@ -2327,33 +2695,46 @@ def symptom_analyze():
                 urgency = sev_level
                 break
 
-    # Anti-repetition wording guard for repeated specialist recommendations.
-    patient = get_or_create_clinical_patient(current_user)
-    recent_query = SymptomLog.query.filter_by(patient_id=patient.patient_id)
-    symptom_pk_col = getattr(SymptomLog, 'symptom_id', None)
-    if symptom_pk_col is not None:
-        recent = recent_query.order_by(symptom_pk_col.desc()).limit(3).all()
-    else:
-        # Safety fallback for unexpected schema/model drift.
-        recent = recent_query.limit(3).all()
-    same_specialist_recently = any((r.recommended_specialist or '') == specialist for r in recent)
-    if same_specialist_recently:
-        if specialist == 'General Practitioner':
-            reason = 'Your current symptoms still look general rather than organ-specific, so primary care triage remains safest.'
-        else:
-            reason = f'This pattern again points to {specialist}; repeating symptoms suggest follow-up with the same specialist.'
-
-    row = SymptomLog(
-        patient_id=patient.patient_id,
-        symptoms=normalized_text,
-        urgency_level=urgency,
-        recommended_specialist=specialist
+    is_logged_patient = (
+        current_user.is_authenticated
+        and getattr(current_user, 'role', None) == 'patient'
     )
-    db.session.add(row)
-    if urgency == 'Emergency':
-        create_patient_notification(patient.patient_id, 'EMERGENCY ALERT: Please seek immediate medical attention')
-        log_system_action('EMERGENCY_DETECTED', f'symptoms={normalized_text}', current_user)
-    db.session.commit()
+
+    patient = None
+    if is_logged_patient:
+        try:
+            patient = get_or_create_clinical_patient(current_user)
+        except Exception:
+            patient = None
+
+    if patient:
+        recent_query = SymptomLog.query.filter_by(patient_id=patient.patient_id)
+        symptom_pk_col = getattr(SymptomLog, 'symptom_id', None)
+        if symptom_pk_col is not None:
+            recent = recent_query.order_by(symptom_pk_col.desc()).limit(3).all()
+        else:
+            recent = recent_query.limit(3).all()
+        same_specialist_recently = any((r.recommended_specialist or '') == specialist for r in recent)
+        if same_specialist_recently:
+            if specialist == 'General Practitioner':
+                reason = 'Your current symptoms still look general rather than organ-specific, so primary care triage remains safest.'
+            else:
+                reason = f'This pattern again points to {specialist}; repeating symptoms suggest follow-up with the same specialist.'
+
+        try:
+            row = SymptomLog(
+                patient_id=patient.patient_id,
+                symptoms=normalized_text,
+                urgency_level=urgency,
+                recommended_specialist=specialist
+            )
+            db.session.add(row)
+            if urgency == 'Emergency':
+                create_patient_notification(patient.patient_id, 'EMERGENCY ALERT: Please seek immediate medical attention')
+                log_system_action('EMERGENCY_DETECTED', f'symptoms={normalized_text}', current_user)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
     safety_note = 'This system does not replace a doctor.'
     return jsonify({
@@ -2411,8 +2792,10 @@ def init_db():
                 except Exception:
                     pass  # column already exists — safe to ignore
 
-        # Seed default admin account
-        if DEMO_MODE:
+        # Seed demo accounts only when explicitly enabled AND no admin exists yet.
+        # This prevents the legacy `admin@medipath.health` / username='admin' pair
+        # from being re-created after an operator has deleted it.
+        if DEMO_MODE and not User.query.filter_by(role='admin').first():
             if not User.query.filter_by(email='admin@medipath.health').first():
                 admin = User(name='MediPath Primary Admin', email='admin@medipath.health', role='admin')
                 admin.set_password('admin123')
@@ -2422,6 +2805,7 @@ def init_db():
                 a = Admin(name='MediPath Primary Admin', username='admin', password='')
                 a.set_secure_password('admin123')
                 db.session.add(a)
+        if DEMO_MODE:
             ensure_clinical_doctors_seeded()
             ensure_demo_doctor_user_links()
         backfill_patient_rows_from_app_users()

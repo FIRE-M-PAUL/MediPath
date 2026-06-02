@@ -11,6 +11,153 @@
             if (btn) btn.innerHTML = plainTextVisible ? PW_ICON_EYE_OFF : PW_ICON_EYE;
         }
     };
+
+    // Shared phone validator — must mirror backend rules in backend/app.py.
+    const PHONE_PREFIXES = ['095', '096', '076', '097', '077'];
+    const PHONE_REGEX = new RegExp('^(?:' + PHONE_PREFIXES.join('|') + ')\\d{7}$');
+    const PHONE_INVALID_MESSAGE =
+        'Invalid phone number. Please enter a valid Zambian mobile number starting with 095, 096, 076, 097, or 077.';
+
+    function _phonePrefixIsPartiallyValid(digits) {
+        if (digits.length === 0) return true;
+        if (digits.length <= 3) {
+            return PHONE_PREFIXES.some(p => p.startsWith(digits));
+        }
+        return PHONE_PREFIXES.includes(digits.slice(0, 3));
+    }
+
+    w.MediPathPhone = {
+        prefixes: PHONE_PREFIXES,
+        regex: PHONE_REGEX,
+        invalidMessage: PHONE_INVALID_MESSAGE,
+        normalize(value) {
+            return String(value == null ? '' : value).replace(/\D/g, '');
+        },
+        prefixIsPartiallyValid: _phonePrefixIsPartiallyValid,
+        validate(value) {
+            const digits = this.normalize(value);
+            if (!digits) return 'Please enter your phone number.';
+            if (digits.length !== 10) {
+                return 'Phone number must be exactly 10 digits.';
+            }
+            if (!/^\d+$/.test(digits)) {
+                return 'Phone number must contain numbers only.';
+            }
+            if (!PHONE_REGEX.test(digits)) {
+                return this.invalidMessage;
+            }
+            return '';
+        },
+
+        /**
+         * Live-validate a phone input so the user can never commit characters
+         * that drift outside the approved Zambian mobile prefixes.
+         *
+         *   opts.errorTextEl       <span> that receives the error text
+         *   opts.errorContainerEl  element whose `visible` class / display we toggle
+         *   opts.onError(msg)      callback fired when typing is rejected
+         *   opts.onClear()         callback fired when the field is acceptable
+         *   opts.useToast          when true, also surface invalid prefix via showToast
+         *   opts.toastDebounceMs   throttle for toast (default 1500ms)
+         */
+        attachLiveInput(input, opts = {}) {
+            if (!input || input.dataset.mpPhoneBound === '1') return;
+            input.dataset.mpPhoneBound = '1';
+
+            input.setAttribute('maxlength', '10');
+            input.setAttribute('inputmode', 'numeric');
+            input.setAttribute('autocomplete', input.getAttribute('autocomplete') || 'tel');
+
+            if (input.dataset.mpLastValid == null) {
+                input.dataset.mpLastValid = this.normalize(input.value);
+                input.value = input.dataset.mpLastValid;
+            }
+
+            const errorTextEl = opts.errorTextEl || null;
+            const errorContainerEl = opts.errorContainerEl || null;
+            const onError = typeof opts.onError === 'function' ? opts.onError : null;
+            const onClear = typeof opts.onClear === 'function' ? opts.onClear : null;
+            const useToast = opts.useToast === true;
+            const toastDebounceMs = typeof opts.toastDebounceMs === 'number'
+                ? opts.toastDebounceMs : 1500;
+            let lastToastAt = 0;
+
+            const showErrorMsg = (msg) => {
+                if (errorTextEl) errorTextEl.textContent = msg;
+                if (errorContainerEl) {
+                    errorContainerEl.classList.add('visible');
+                    if (errorContainerEl.style) errorContainerEl.style.display = '';
+                }
+                input.classList.add('input-error');
+                input.classList.remove('input-success');
+                input.setAttribute('aria-invalid', 'true');
+                if (useToast && typeof showToast === 'function') {
+                    const now = Date.now();
+                    if (now - lastToastAt > toastDebounceMs) {
+                        lastToastAt = now;
+                        showToast(msg, 'error');
+                    }
+                }
+                if (onError) onError(msg);
+            };
+
+            const clearErrorMsg = () => {
+                if (errorTextEl) errorTextEl.textContent = '';
+                if (errorContainerEl) {
+                    errorContainerEl.classList.remove('visible');
+                }
+                input.classList.remove('input-error');
+                input.setAttribute('aria-invalid', 'false');
+                if (onClear) onClear();
+            };
+
+            const handleInput = () => {
+                let digits = this.normalize(input.value).slice(0, 10);
+                if (digits.length === 0) {
+                    input.value = '';
+                    input.dataset.mpLastValid = '';
+                    clearErrorMsg();
+                    return;
+                }
+                if (!_phonePrefixIsPartiallyValid(digits)) {
+                    // Reject the new keystroke entirely.
+                    input.value = input.dataset.mpLastValid || '';
+                    showErrorMsg(PHONE_INVALID_MESSAGE);
+                    return;
+                }
+                input.value = digits;
+                input.dataset.mpLastValid = digits;
+                clearErrorMsg();
+            };
+
+            const handleBlur = () => {
+                const v = this.normalize(input.value);
+                if (v.length > 0 && v.length < 10) {
+                    showErrorMsg('Phone number must be exactly 10 digits.');
+                }
+            };
+
+            // Reject pasted text that breaks the prefix rule before it lands.
+            const handlePaste = (e) => {
+                try {
+                    const pasted = (e.clipboardData || window.clipboardData).getData('text');
+                    const combined = (input.value + pasted);
+                    const digits = this.normalize(combined).slice(0, 10);
+                    if (digits.length && !_phonePrefixIsPartiallyValid(digits)) {
+                        e.preventDefault();
+                        showErrorMsg(PHONE_INVALID_MESSAGE);
+                    }
+                } catch (_) { /* fallback to input handler */ }
+            };
+
+            input.addEventListener('input', handleInput);
+            input.addEventListener('blur', handleBlur);
+            input.addEventListener('paste', handlePaste);
+
+            // Initial sweep so a prefilled value gets validated too.
+            handleInput();
+        }
+    };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 // -- 1. Backend API Integration --
@@ -148,6 +295,10 @@ const API = {
     adminCancelAppointment(id, reason) { return this.request(`/admin/appointments/${id}/cancel`, 'POST', { reason }); },
     getAdminReportSummary() { return this.request('/admin/reports/summary'); },
     getDoctorProfile() { return this.request('/doctor/profile'); },
+    getDoctorMyPatients() { return this.request('/doctor/my-patients'); },
+    getDoctorPatient(patientUserId) { return this.request(`/doctor/patients/${patientUserId}`); },
+    getDoctorPatientMedicalRecords(patientUserId) { return this.request(`/doctor/patients/${patientUserId}/medical-records`); },
+    getDoctorPatientAppointments(patientUserId) { return this.request(`/doctor/patients/${patientUserId}/appointments`); },
     async getDoctorNotifications() {
         try {
             const response = await fetch(`${API_BASE}/doctor/notifications`, {
@@ -198,7 +349,7 @@ const Auth = {
     },
     async register(data, role = 'patient') {
         const result = await API.register(data, role);
-        return result.success;
+        return result;
     },
     async logout() {
         await API.logout();
@@ -699,9 +850,17 @@ function initBookingForm() {
 
     // 1. Pre-fill user data if logged in
     if (user) {
-        if (nameInput)  { nameInput.value  = user.name;  nameInput.readOnly = true; }
-        if (phoneInput) { phoneInput.value = user.phone; nameInput.readOnly = true; }
-        if (emailInput) { emailInput.value = user.email; nameInput.readOnly = true; }
+        if (nameInput)  { nameInput.value  = user.name || '';  nameInput.readOnly = true; }
+        if (phoneInput) { phoneInput.value = user.phone || ''; phoneInput.readOnly = !!user.phone; }
+        if (emailInput) { emailInput.value = user.email || ''; emailInput.readOnly = true; }
+    }
+
+    // 1b. Attach live phone validation (skip if the field is read-only-prefilled).
+    if (phoneInput && !phoneInput.readOnly && window.MediPathPhone) {
+        MediPathPhone.attachLiveInput(phoneInput, {
+            errorTextEl: document.getElementById('error-phone'),
+            errorContainerEl: document.getElementById('error-phone')
+        });
     }
 
     // 2. Prevent past dates
@@ -728,10 +887,12 @@ function initBookingForm() {
 }
 
 // Booking Form Submission & Validation
+let _bookingInFlight = false;
 const bookingForm = document.getElementById('booking-form');
 if (bookingForm) {
     bookingForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        if (_bookingInFlight) return;
         
         // Reset Error Messages
         document.querySelectorAll('.error-msg').forEach(el => el.textContent = '');
@@ -752,8 +913,9 @@ if (bookingForm) {
             isValid = false;
         }
 
-        if (!phone || phone.length < 10 || isNaN(phone)) {
-            document.getElementById('error-phone').textContent = 'Enter a valid phone number';
+        const phoneError = MediPathPhone.validate(phone);
+        if (phoneError) {
+            document.getElementById('error-phone').textContent = phoneError;
             isValid = false;
         }
 
@@ -779,8 +941,8 @@ if (bookingForm) {
 
         if (!isValid) return;
 
-        if (!/^[0-9]{10,15}$/.test(phone)) {
-            document.getElementById('error-phone').textContent = 'Invalid phone number';
+        if (!MediPathPhone.regex.test(MediPathPhone.normalize(phone))) {
+            document.getElementById('error-phone').textContent = MediPathPhone.invalidMessage;
             return;
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -802,6 +964,13 @@ if (bookingForm) {
             return;
         }
         const appointmentDate = new Date(`${date} ${time}`).toISOString();
+        const submitBtn = document.getElementById('submit-booking');
+        const submitLabel = submitBtn ? submitBtn.textContent : '';
+        _bookingInFlight = true;
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Booking…';
+        }
         API.createClinicalAppointment({
             doctor_id: doctorId,
             appointment_date: appointmentDate,
@@ -809,6 +978,11 @@ if (bookingForm) {
         }).then((result) => {
             if (!result || result.success === false) {
                 showToast(result?.message || 'Failed to book appointment', 'error');
+                _bookingInFlight = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = submitLabel;
+                }
                 return;
             }
 
@@ -827,6 +1001,13 @@ if (bookingForm) {
             } else {
                 showToast('Appointment booked successfully!', 'success');
                 setTimeout(() => window.location.href = 'dashboard.html', 1500);
+            }
+        }).catch(() => {
+            showToast('Failed to book appointment', 'error');
+            _bookingInFlight = false;
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = submitLabel;
             }
         });
     });

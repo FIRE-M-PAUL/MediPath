@@ -60,8 +60,12 @@
                     </div>
                     <div class="form-group">
                         <label for="booking-phone">Phone Number</label>
-                        <input type="tel" id="booking-phone" class="form-control" required placeholder="e.g. 0970000000" 
-                               oninput="this.value = this.value.replace(/[^0-9]/g, '')" pattern="\d*">
+                        <input type="tel" id="booking-phone" class="form-control" required
+                               placeholder="e.g. 0971234567 (Zamtel/MTN/Airtel)"
+                               maxlength="10"
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,10)"
+                               pattern="(095|096|097|076|077)\d{7}"
+                               title="Enter a 10-digit Zambian mobile number starting with 095, 096, 097, 076, or 077">
                         <small class="error-msg" id="error-phone"></small>
                     </div>
                 </div>
@@ -129,8 +133,8 @@
                     <a href="doctors.html" style="font-size: 0.9rem; color: var(--text-light); font-weight: 600;">← Browse Doctors First</a>
                 </div>
             </form>
-        </main>
-    </div>
+        </div>
+    </main>
 
     <!-- ===== CONFIRMATION OVERLAY ===== -->
     <div id="confirmation-overlay" style="display: none;">

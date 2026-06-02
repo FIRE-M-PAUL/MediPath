@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Patients - MediPath</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .patients-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 1.5rem;
+            min-height: calc(100vh - 200px);
+        }
+        @media (max-width: 900px) {
+            .patients-layout { grid-template-columns: 1fr; }
+        }
+        .patient-list-panel {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            background: var(--surface-color);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 200px);
+        }
+        .patient-list-panel h3 {
+            padding: 1rem 1.25rem;
+            margin: 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 1rem;
+        }
+        .patient-list-scroll {
+            overflow-y: auto;
+            flex: 1;
+        }
+        .patient-list-item {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: var(--transition-fast);
+        }
+        .patient-list-item:hover { background: var(--primary-light); }
+        .patient-list-item.active {
+            background: var(--primary-color);
+            color: #fff;
+        }
+        .patient-list-item.active .text-light { color: rgba(255,255,255,0.85); }
+        .detail-panel { min-width: 0; }
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .profile-field label {
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-light);
+            margin-bottom: 0.25rem;
+        }
+        .profile-field span {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--text-light);
+        }
+        .empty-state .icon { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; }
+    </style>
+</head>
+
+<body style="background-color: var(--bg-color);">
+
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="doctor-dashboard.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath
+                    <span style="color: var(--text-light); font-weight: 500; font-size: 0.9rem;">Doctor Console</span>
+                </a>
+                <div class="nav-auth">
+                    <span id="doc-active-name" style="font-weight: 600; font-size: 0.9rem; margin-right: 1rem;"></span>
+                    <button onclick="Auth.logout()" class="btn btn-outline btn-sm">Sign Out</button>
+                </div>
+                <div class="nav-right">
+                    <button id="dark-mode-toggle">🌙</button>
+                    <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <p class="sidebar-label">Main Menu</p>
+            <ul class="sidebar-menu">
+                <li><a href="doctor-dashboard.html" class="sidebar-link">📊 Dashboard Overview</a></li>
+                <li><a href="doctor-appointments.html" class="sidebar-link">📅 Patient Appointments</a></li>
+                <li><a href="doctor-patients.html" class="sidebar-link active">🧑‍⚕️ My Patients</a></li>
+                <li><a href="doctor-messages.html" class="sidebar-link">💬 Consultations / Messages</a></li>
+                <li><a href="doctor-profile.html" class="sidebar-link">👤 Professional Profile</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <div class="dashboard-header">
+                <div>
+                    <h2>My Patients</h2>
+                    <p class="text-light">View patient profiles, appointments, and medical records by patient ID.</p>
+                </div>
+                <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                    <input type="number" id="patient-id-lookup" class="form-control" placeholder="Patient portal ID" style="max-width: 160px;" min="1">
+                    <button type="button" class="btn btn-primary btn-sm" onclick="lookupPatientById()">Look up</button>
+                </div>
+            </div>
+
+            <div class="patients-layout">
+                <div class="patient-list-panel">
+                    <h3>Patient directory</h3>
+                    <div class="patient-list-scroll" id="patient-list">
+                        <div class="text-light" style="padding: 1.25rem;">Loading patients…</div>
+                    </div>
+                </div>
+
+                <div class="detail-panel" id="detail-panel">
+                    <div class="card empty-state">
+                        <span class="icon">🧑‍⚕️</span>
+                        <p>Select a patient from the list to view their profile and medical records.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/script.js"></script>
+    <script>
+        Auth.requireAuth('doctor');
+
+        let activePatientId = null;
+        let patientListCache = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Auth.refreshSession();
+            const doc = Auth.getUser();
+            const nameEl = document.getElementById('doc-active-name');
+            if (doc && nameEl) nameEl.textContent = doc.name || 'Doctor';
+
+            const params = new URLSearchParams(window.location.search);
+            const preselect = params.get('id');
+            await loadPatientDirectory(preselect ? parseInt(preselect, 10) : null);
+        });
+
+        async function loadPatientDirectory(preselectId) {
+            const listEl = document.getElementById('patient-list');
+            listEl.innerHTML = '<div class="text-light" style="padding: 1.25rem;">Loading patients…</div>';
+
+            const res = await API.getDoctorMyPatients();
+            patientListCache = (res && res.success && Array.isArray(res.items)) ? res.items : [];
+
+            if (patientListCache.length === 0) {
+                listEl.innerHTML = '<div class="text-light" style="padding: 1.25rem;">No patients have booked with you yet.</div>';
+                return;
+            }
+
+            listEl.innerHTML = patientListCache.map(p => `
+                <div class="patient-list-item ${activePatientId === p.id ? 'active' : ''}"
+                     data-id="${p.id}"
+                     onclick="selectPatient(${p.id})">
+                    <div style="font-weight: 700;">${escapeHtml(p.name)}</div>
+                    <div class="text-light" style="font-size: 0.8rem; margin-top: 0.2rem;">ID: ${p.id}</div>
+                    ${p.email ? `<div class="text-light" style="font-size: 0.75rem;">${escapeHtml(p.email)}</div>` : ''}
+                </div>
+            `).join('');
+
+            const targetId = preselectId && patientListCache.some(p => p.id === preselectId)
+                ? preselectId
+                : patientListCache[0].id;
+            await selectPatient(targetId);
+        }
+
+        async function selectPatient(patientUserId) {
+            activePatientId = patientUserId;
+            document.querySelectorAll('.patient-list-item').forEach(el => {
+                el.classList.toggle('active', parseInt(el.dataset.id, 10) === patientUserId);
+            });
+
+            const panel = document.getElementById('detail-panel');
+            panel.innerHTML = '<div class="card"><p class="text-light" style="padding: 1.5rem;">Loading patient details…</p></div>';
+
+            const [profileRes, recordsRes, apptsRes] = await Promise.all([
+                API.getDoctorPatient(patientUserId),
+                API.getDoctorPatientMedicalRecords(patientUserId),
+                API.getDoctorPatientAppointments(patientUserId),
+            ]);
+
+            if (!profileRes || profileRes.success === false) {
+                panel.innerHTML = `<div class="card"><p class="text-light" style="padding: 1.5rem;">${escapeHtml(profileRes?.message || 'Unable to load patient.')}</p></div>`;
+                return;
+            }
+
+            const p = profileRes.patient;
+            const records = (recordsRes && recordsRes.success && Array.isArray(recordsRes.items)) ? recordsRes.items : [];
+            const appointments = (apptsRes && apptsRes.success && Array.isArray(apptsRes.items)) ? apptsRes.items : [];
+
+            panel.innerHTML = `
+                <div class="card mb-2">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+                        <div>
+                            <h3 style="margin: 0 0 0.25rem;">${escapeHtml(p.name)}</h3>
+                            <p class="text-light" style="margin: 0; font-size: 0.9rem;">Portal ID: ${p.id}${p.clinical_patient_id ? ` · Clinical ID: ${p.clinical_patient_id}` : ''}</p>
+                        </div>
+                        <a href="doctor-messages.html?patient_id=${p.id}&patient_name=${encodeURIComponent(p.name || 'Patient')}" class="btn btn-outline btn-sm">💬 Message</a>
+                    </div>
+                    <div class="profile-grid">
+                        <div class="profile-field"><label>Email</label><span>${escapeHtml(p.email || '—')}</span></div>
+                        <div class="profile-field"><label>Phone</label><span>${escapeHtml(p.phone || '—')}</span></div>
+                        <div class="profile-field"><label>Gender</label><span>${escapeHtml(p.gender || '—')}</span></div>
+                        <div class="profile-field"><label>Date of birth</label><span>${escapeHtml(p.date_of_birth || '—')}</span></div>
+                        <div class="profile-field" style="grid-column: 1 / -1;"><label>Address</label><span>${escapeHtml(p.address || '—')}</span></div>
+                    </div>
+                </div>
+
+                <div class="card mb-2">
+                    <h3 style="margin-bottom: 1rem;">Appointments with you</h3>
+                    ${appointments.length === 0
+                        ? '<p class="text-light">No appointments found for this patient.</p>'
+                        : `<div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th>Notes / reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${appointments.map(a => `
+                                        <tr>
+                                            <td>${formatDate(a.date_time || a.appointment_date)}</td>
+                                            <td>${escapeHtml(a.status || 'Pending')}</td>
+                                            <td>${escapeHtml(a.reason || a.notes || '—')}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                           </div>`}
+                </div>
+
+                <div class="card">
+                    <h3 style="margin-bottom: 1rem;">Medical records</h3>
+                    ${records.length === 0
+                        ? '<p class="text-light">No medical records on file for this patient.</p>'
+                        : `<div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Visit date</th>
+                                        <th>Diagnosis</th>
+                                        <th>Prescription</th>
+                                        <th>Treatment</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${records.map(r => `
+                                        <tr>
+                                            <td>${formatDate(r.visit_date)}</td>
+                                            <td>${escapeHtml(r.diagnosis || '—')}</td>
+                                            <td>${escapeHtml(r.prescription || '—')}</td>
+                                            <td>${escapeHtml(r.treatment || '—')}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                           </div>`}
+                </div>
+            `;
+        }
+
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        async function lookupPatientById() {
+            const input = document.getElementById('patient-id-lookup');
+            const raw = input ? input.value.trim() : '';
+            const id = parseInt(raw, 10);
+            if (!Number.isInteger(id) || id <= 0) {
+                showToast('Enter a valid patient portal ID (number).', 'error');
+                return;
+            }
+            const res = await API.getDoctorPatient(id);
+            if (!res || res.success === false) {
+                showToast(res?.message || 'Patient not found or not linked to your practice.', 'error');
+                return;
+            }
+            if (!patientListCache.some(p => p.id === id)) {
+                patientListCache.push({
+                    id: res.patient.id,
+                    name: res.patient.name,
+                    email: res.patient.email,
+                    phone: res.patient.phone,
+                });
+                await loadPatientDirectory(id);
+            } else {
+                await selectPatient(id);
+            }
+        }
+    </script>
+</body>
+
+</html>

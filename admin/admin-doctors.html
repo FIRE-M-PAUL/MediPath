@@ -187,7 +187,7 @@
             <ul class="sidebar-menu">
                 <li><a href="admin-dashboard.html" class="sidebar-link">📊 System Overview</a></li>
                 <li><a href="admin-doctors.html"   class="sidebar-link active">👨‍⚕️ Verify Physicians</a></li>
-                <li><a href="admin-patients.html"  class="sidebar-link">👥 Manage Patients</a></li>
+                <li><a href="admin-patients.html"  class="sidebar-link">👥 Manage Users</a></li>
                 <li><a href="admin-appointments.html" class="sidebar-link">📅 All Appointments</a></li>
                 <li><a href="admin-admins.html"    class="sidebar-link">🛡️ Manage Team</a></li>
                 <li><a href="admin-reports.html"   class="sidebar-link">📈 Analytics Reports</a></li>
@@ -398,8 +398,20 @@
             /* Helper: show value or editable input */
             function field(label, key, value, type='text', fullWidth=false) {
                 const displayVal = value || '<span class="no-data">Not provided</span>';
+                let extraAttrs = '';
+                let inputType = type;
+                let placeholder = `Enter ${label.toLowerCase()}`;
+                if (key === 'phone') {
+                    inputType = 'tel';
+                    placeholder = 'e.g. 0971234567 (Zamtel/MTN/Airtel)';
+                    extraAttrs =
+                        ' maxlength="10"' +
+                        ' pattern="(095|096|097|076|077)\\d{7}"' +
+                        ' title="Enter a 10-digit Zambian mobile number starting with 095, 096, 097, 076, or 077"' +
+                        ' oninput="this.value = this.value.replace(/[^0-9]/g, \'\').slice(0,10)"';
+                }
                 const inputHtml = editMode
-                    ? `<input type="${type}" id="edit-${key}" value="${value||''}" placeholder="Enter ${label.toLowerCase()}">`
+                    ? `<input type="${inputType}" id="edit-${key}" value="${value||''}" placeholder="${placeholder}"${extraAttrs}>`
                     : `<span>${displayVal}</span>`;
                 return `<div class="info-item" ${fullWidth?'style="grid-column:span 2;"':''}>
                     <label>${label}</label>
@@ -492,6 +504,22 @@
 
             /* Render action buttons */
             renderActions();
+
+            /* Wire live phone validation when the edit input is on screen. */
+            const editPhoneInput = document.getElementById('edit-phone');
+            if (editPhoneInput && window.MediPathPhone) {
+                // Append an inline error label next to the input (idempotent).
+                let errEl = editPhoneInput.parentElement.querySelector('.mp-phone-error');
+                if (!errEl) {
+                    errEl = document.createElement('small');
+                    errEl.className = 'mp-phone-error';
+                    errEl.style.cssText = 'display:block;color:#ef4444;margin-top:0.35rem;font-size:0.75rem;font-weight:600;';
+                    editPhoneInput.parentElement.appendChild(errEl);
+                }
+                MediPathPhone.attachLiveInput(editPhoneInput, {
+                    errorTextEl: errEl
+                });
+            }
         }
 
         function renderActions() {
@@ -554,8 +582,16 @@
             const d = currentDoctor;
             const formData = new FormData();
 
+            const editPhoneRaw = document.getElementById('edit-phone')?.value?.trim() || '';
+            if (editPhoneRaw) {
+                const phoneError = window.MediPathPhone ? MediPathPhone.validate(editPhoneRaw) : '';
+                if (phoneError) {
+                    showToast(phoneError, 'error');
+                    return;
+                }
+            }
             const fields = {
-                phone:      document.getElementById('edit-phone')?.value?.trim(),
+                phone:      editPhoneRaw ? (window.MediPathPhone ? MediPathPhone.normalize(editPhoneRaw) : editPhoneRaw) : '',
                 specialty:  document.getElementById('edit-specialty')?.value?.trim(),
                 hospital:   document.getElementById('edit-hospital')?.value?.trim(),
                 license:    document.getElementById('edit-license')?.value?.trim(),
