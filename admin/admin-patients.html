@@ -35,6 +35,8 @@
                 <li><a href="admin-appointments.html" class="sidebar-link">📅 All Appointments</a></li>
                 <li><a href="admin-admins.html" class="sidebar-link">🛡️ Manage Team</a></li>
                 <li><a href="admin-reports.html" class="sidebar-link">📈 Analytics Reports</a></li>
+                <li><a href="admin-payments.html" class="sidebar-link">💳 Payments</a></li>
+                <li><a href="admin-contact.html" class="sidebar-link">✉️ Messages</a></li>
             </ul>
 
             <div class="sidebar-footer">
@@ -61,6 +63,9 @@
                                 <th>Patient Name</th>
                                 <th>Email</th>
                                 <th>Contact Number</th>
+                                <th>Age</th>
+                                <th>Gender</th>
+                                <th>Residence</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -89,6 +94,9 @@
                     </td>
                     <td>${u.email}</td>
                     <td>${u.role === 'admin' ? '🛡️ Administrator Access' : (u.phone || 'N/A')}</td>
+                    <td>${u.role === 'patient' ? (u.age != null && u.age !== '' ? u.age : 'N/A') : '—'}</td>
+                    <td>${u.role === 'patient' ? (u.gender && u.gender !== 'Unknown' ? u.gender : 'N/A') : '—'}</td>
+                    <td>${u.role === 'patient' ? (u.residence || 'N/A') : '—'}</td>
                     <td>
                         <div style="display:flex; gap:0.5rem;">
                             ${u.role === 'patient' ? `
@@ -100,7 +108,7 @@
                         </div>
                     </td>
                 </tr>
-            `).join('') || '<tr><td colspan="4" class="text-center py-3">No patient records found in database.</td></tr>';
+            `).join('') || '<tr><td colspan="7" class="text-center py-3">No patient records found in database.</td></tr>';
         }
 
         document.addEventListener('DOMContentLoaded', renderPatientsTable);

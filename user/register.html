@@ -554,6 +554,57 @@
                         </div>
                     </div>
 
+                    <!-- Age + Gender in grid -->
+                    <div class="form-grid-2">
+                        <div class="input-group">
+                            <label for="reg-age">🎂 Age</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon">🎂</span>
+                                <input type="number" id="reg-age" name="age"
+                                    placeholder="e.g. 28" min="0" max="130"
+                                    inputmode="numeric"
+                                    aria-describedby="age-error"
+                                    oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,3)">
+                            </div>
+                            <span class="error-msg" id="age-error" role="alert">
+                                ❌ <span id="age-error-text">Please enter a valid age (0–130)</span>
+                            </span>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="reg-gender">⚧ Gender</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon">⚧</span>
+                                <select id="reg-gender" name="gender" aria-label="Select gender"
+                                    style="width:100%; padding:0.8rem 1rem 0.8rem 2.5rem; font-family:'Poppins','Inter',sans-serif; font-size:0.875rem; border:2px solid var(--border-color,#e2e8f0); border-radius:10px; background-color:var(--bg-color,#f8fafc); color:var(--text-color,#1e293b); outline:none;">
+                                    <option value="" selected disabled>Select…</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                    <option value="Prefer not to say">Prefer not to say</option>
+                                </select>
+                            </div>
+                            <span class="error-msg" id="gender-error" role="alert">
+                                ❌ <span id="gender-error-text">Please select your gender</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Residence -->
+                    <div class="input-group">
+                        <label for="reg-residence">🏠 Residence</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">🏠</span>
+                            <input type="text" id="reg-residence" name="residence"
+                                placeholder="e.g. Lusaka, Kabwata"
+                                autocomplete="address-level2"
+                                aria-describedby="residence-error">
+                        </div>
+                        <span class="error-msg" id="residence-error" role="alert">
+                            ❌ <span id="residence-error-text">Please enter your area of residence</span>
+                        </span>
+                    </div>
+
                     <!-- Password -->
                     <div class="input-group">
                         <label for="reg-password">🔒 Password</label>
@@ -642,6 +693,9 @@
         const nameInput    = document.getElementById('reg-name');
         const emailInput   = document.getElementById('reg-email');
         const phoneInput   = document.getElementById('reg-phone');
+        const ageInput     = document.getElementById('reg-age');
+        const genderInput  = document.getElementById('reg-gender');
+        const residenceInput = document.getElementById('reg-residence');
         const passInput    = document.getElementById('reg-password');
         const confirmInput = document.getElementById('reg-confirm');
         const togglePassBtn = document.getElementById('toggle-reg-password');
@@ -691,6 +745,15 @@
             }
             return '';
         }
+        function validateAge(v) {
+            const s = String(v || '').trim();
+            if (!s) return 'Please enter your age.';
+            const n = parseInt(s, 10);
+            if (isNaN(n) || n < 0 || n > 130) return 'Please enter a valid age (0–130).';
+            return '';
+        }
+        function validateGender(v) { return (v || '').trim() ? '' : 'Please select your gender.'; }
+        function validateResidence(v) { return (v || '').trim() ? '' : 'Please enter your area of residence.'; }
         function validatePassword(v) {
             if (!v)           return 'Please enter a password.';
             if (v.length < 8) return 'Password must be at least 8 characters.';
@@ -770,6 +833,24 @@
             });
         }
 
+        ageInput.addEventListener('blur', () => {
+            const err = validateAge(ageInput.value);
+            if (err) showError(ageInput, document.getElementById('age-error'), document.getElementById('age-error-text'), err);
+            else     clearError(ageInput, document.getElementById('age-error'));
+        });
+
+        genderInput.addEventListener('change', () => {
+            const err = validateGender(genderInput.value);
+            if (err) showError(genderInput, document.getElementById('gender-error'), document.getElementById('gender-error-text'), err);
+            else     clearError(genderInput, document.getElementById('gender-error'));
+        });
+
+        residenceInput.addEventListener('blur', () => {
+            const err = validateResidence(residenceInput.value);
+            if (err) showError(residenceInput, document.getElementById('residence-error'), document.getElementById('residence-error-text'), err);
+            else     clearError(residenceInput, document.getElementById('residence-error'));
+        });
+
         passInput.addEventListener('blur', () => {
             const err = validatePassword(passInput.value);
             if (err) showError(passInput, document.getElementById('reg-pass-error'), document.getElementById('reg-pass-error-text'), err);
@@ -831,6 +912,9 @@
                 [nameInput,    document.getElementById('name-error'),       document.getElementById('name-error-text'),       validateName],
                 [emailInput,   document.getElementById('reg-email-error'),  document.getElementById('reg-email-error-text'),  validateEmail],
                 [phoneInput,   document.getElementById('phone-error'),      document.getElementById('phone-error-text'),      validatePhone],
+                [ageInput,     document.getElementById('age-error'),        document.getElementById('age-error-text'),        validateAge],
+                [genderInput,  document.getElementById('gender-error'),     document.getElementById('gender-error-text'),     validateGender],
+                [residenceInput, document.getElementById('residence-error'),document.getElementById('residence-error-text'),  validateResidence],
                 [passInput,    document.getElementById('reg-pass-error'),   document.getElementById('reg-pass-error-text'),   validatePassword],
                 [confirmInput, document.getElementById('confirm-error'),    document.getElementById('confirm-error-text'),    validateConfirm],
             ];
@@ -865,6 +949,9 @@
                 name: nameInput.value.trim(),
                 email: emailInput.value.trim(),
                 phone: (window.MediPathPhone ? MediPathPhone.normalize(phoneInput.value) : phoneInput.value.trim()),
+                age: ageInput.value.trim(),
+                gender: genderInput.value,
+                residence: residenceInput.value.trim(),
                 password: passInput.value
             };
 

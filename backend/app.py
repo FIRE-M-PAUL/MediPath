@@ -32,6 +32,9 @@ try:
         SymptomLog,
         Notification,
         SystemLog,
+        Subscription,
+        Payment,
+        ContactMessage,
     )
     from backend.db_config import build_database_uri, resolve_sqlite_path_from_uri
     from backend.relational_schema import init_relational_schema
@@ -51,6 +54,9 @@ except ModuleNotFoundError:
         SymptomLog,
         Notification,
         SystemLog,
+        Subscription,
+        Payment,
+        ContactMessage,
     )
     from db_config import build_database_uri, resolve_sqlite_path_from_uri
     from relational_schema import init_relational_schema
@@ -208,6 +214,160 @@ def validate_password(password):
     return bool(password) and re.match(PASSWORD_REGEX, password) is not None
 
 
+# ============================================================
+#  SUBSCRIPTION & PAYMENT CONFIG (documentation scope)
+#  Fees: Doctors K100 / 3 months, Patients K50 / 3 months.
+# ============================================================
+SUBSCRIPTION_PERIOD_DAYS = 90               # ~3 months
+SUBSCRIPTION_REMINDER_DAYS = 7              # warn this many days before expiry
+SUBSCRIPTION_FEES = {'doctor': 100.0, 'patient': 50.0}
+SUBSCRIPTION_CURRENCY = 'ZMW'
+
+# Accepted mobile-money modes -> canonical label stored in DB.
+PAYMENT_MODES = {
+    'airtel': 'Airtel Money',
+    'airtel money': 'Airtel Money',
+    'mtn': 'MTN Mobile Money',
+    'mtn mobile money': 'MTN Mobile Money',
+    'zamtel': 'Zamtel Money',
+    'zamtel money': 'Zamtel Money',
+}
+
+# API paths a FROZEN user may still reach (so they can pay / log out / contact).
+SUBSCRIPTION_EXEMPT_API_PREFIXES = (
+    '/api/csrf-token',
+    '/api/auth/login',
+    '/api/auth/logout',
+    '/api/auth/me',
+    '/api/subscription',
+    '/api/payments',
+    '/api/contact',
+)
+
+
+def subscription_fee_for_role(role):
+    return SUBSCRIPTION_FEES.get((role or '').lower(), 0.0)
+
+
+def get_or_create_subscription(user):
+    """
+    Return the Subscription for a portal user (patient/doctor), creating a
+    3-month ACTIVE grace period on first access so nobody is locked out
+    immediately. Admins never get a subscription.
+    """
+    if not user or getattr(user, 'role', None) not in ('patient', 'doctor'):
+        return None
+    sub = Subscription.query.filter_by(user_id=user.id).first()
+    if sub:
+        return sub
+    now = datetime.utcnow()
+    sub = Subscription(
+        user_id=user.id,
+        role=user.role,
+        start_date=now,
+        expiry_date=now + timedelta(days=SUBSCRIPTION_PERIOD_DAYS),
+        payment_status='pending',
+        account_status='active',
+    )
+    db.session.add(sub)
+    db.session.flush()
+    return sub
+
+
+def refresh_subscription_state(sub):
+    """
+    Recompute derived status: freeze when the period has lapsed without a
+    current payment. Returns the (possibly mutated) subscription. Caller commits.
+    """
+    if not sub:
+        return None
+    now = datetime.utcnow()
+    if sub.expiry_date and sub.expiry_date < now:
+        # Period elapsed — overdue and frozen until a new payment is made.
+        if sub.payment_status != 'overdue':
+            sub.payment_status = 'overdue'
+        if sub.account_status != 'frozen':
+            sub.account_status = 'frozen'
+    return sub
+
+
+def subscription_status_payload(user):
+    """Full status object consumed by the frontend banner / payment page."""
+    sub = get_or_create_subscription(user)
+    if not sub:
+        return {'applicable': False, 'role': getattr(user, 'role', None)}
+    refresh_subscription_state(sub)
+    now = datetime.utcnow()
+    days_left = None
+    if sub.expiry_date:
+        days_left = (sub.expiry_date.date() - now.date()).days
+    expiring_soon = (
+        sub.account_status == 'active'
+        and days_left is not None
+        and 0 <= days_left <= SUBSCRIPTION_REMINDER_DAYS
+    )
+    return {
+        'applicable': True,
+        'role': sub.role,
+        'start_date': sub.start_date.isoformat() if sub.start_date else None,
+        'expiry_date': sub.expiry_date.isoformat() if sub.expiry_date else None,
+        'payment_status': sub.payment_status,
+        'account_status': sub.account_status,
+        'frozen': sub.account_status == 'frozen',
+        'days_left': days_left,
+        'expiring_soon': expiring_soon,
+        'fee': subscription_fee_for_role(sub.role),
+        'currency': SUBSCRIPTION_CURRENCY,
+        'period_months': 3,
+    }
+
+
+def backfill_subscriptions_for_existing_users():
+    """Idempotently create a subscription for every patient/doctor that lacks one."""
+    users = User.query.filter(User.role.in_(('patient', 'doctor'))).all()
+    for user in users:
+        if not Subscription.query.filter_by(user_id=user.id).first():
+            try:
+                with db.session.begin_nested():
+                    get_or_create_subscription(user)
+            except Exception:
+                pass
+
+
+def record_subscription_payment(user, mode_label, phone=None):
+    """
+    Record a completed payment and extend the subscription by one 3-month
+    period from the later of (now, current expiry). Returns the Payment row.
+    """
+    sub = get_or_create_subscription(user)
+    now = datetime.utcnow()
+    base = sub.expiry_date if (sub.expiry_date and sub.expiry_date > now) else now
+    new_expiry = base + timedelta(days=SUBSCRIPTION_PERIOD_DAYS)
+
+    sub.start_date = sub.start_date or now
+    sub.expiry_date = new_expiry
+    sub.payment_status = 'paid'
+    sub.account_status = 'active'
+
+    amount = subscription_fee_for_role(user.role)
+    payment = Payment(
+        user_id=user.id,
+        payer_name=user.name,
+        role=user.role,
+        payment_mode=mode_label,
+        amount=amount,
+        currency=SUBSCRIPTION_CURRENCY,
+        phone=(phone or user.phone or ''),
+        reference='MP' + now.strftime('%y%m%d%H%M%S') + str(user.id),
+        period_months=3,
+        expiry_date=new_expiry,
+        status='completed',
+    )
+    db.session.add(payment)
+    db.session.flush()
+    return payment
+
+
 def validate_iso_datetime(value):
     if value is None or value == '':
         return False
@@ -318,6 +478,40 @@ def enforce_session_timeout():
     return None
 
 
+@app.before_request
+def enforce_subscription_freeze():
+    """
+    Block FROZEN patients/doctors from using service APIs once their
+    subscription has lapsed unpaid. They may still reach payment / auth /
+    contact endpoints, and the frontend redirects pages to /payment.html.
+    Admins and unauthenticated requests are never gated here.
+    """
+    if not current_user.is_authenticated:
+        return None
+    if getattr(current_user, 'role', None) not in ('patient', 'doctor'):
+        return None
+    # Only gate API calls; static HTML pages handle redirect client-side.
+    if not request.path.startswith('/api/'):
+        return None
+    if any(request.path.startswith(p) for p in SUBSCRIPTION_EXEMPT_API_PREFIXES):
+        return None
+    try:
+        sub = get_or_create_subscription(current_user)
+        refresh_subscription_state(sub)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return None
+    if sub and sub.account_status == 'frozen':
+        return jsonify({
+            'success': False,
+            'frozen': True,
+            'message': 'Your subscription has expired. Please renew to continue using MediPath.',
+            'redirect': '/payment.html',
+        }), 402
+    return None
+
+
 def require_role(*roles):
     def decorator(fn):
         @wraps(fn)
@@ -377,10 +571,11 @@ def _split_user_display_name(name):
     return first, last
 
 
-def ensure_patient_row_from_user(user, raw_password=None):
+def ensure_patient_row_from_user(user, raw_password=None, age=None, gender=None, residence=None):
     """
     Insert a PATIENT row for an app user with role patient (idempotent by email).
     raw_password: plaintext used for PATIENT.password (academic API); if None, uses a placeholder.
+    age/gender/residence: optional demographic fields collected at registration.
     """
     if not user or getattr(user, 'role', None) != 'patient':
         return None
@@ -395,13 +590,15 @@ def ensure_patient_row_from_user(user, raw_password=None):
     patient = Patient(
         first_name=first,
         last_name=last,
-        gender='Unknown',
+        gender=(gender or 'Unknown'),
         date_of_birth='',
         phone=(user.phone or '').strip(),
         email=email,
-        address='',
+        address=(residence or ''),
         password='',
         date_created=now_iso,
+        age=age,
+        residence=(residence or ''),
     )
     pw = raw_password if raw_password else 'placeholder123'
     patient.set_secure_password(pw)
@@ -852,6 +1049,17 @@ def register():
     phone_raw = (data.get('phone') or '').strip()
     phone    = _normalize_phone_digits(phone_raw) or None
 
+    # Documentation scope: optional patient demographics.
+    gender    = (data.get('gender') or '').strip() or None
+    residence = (data.get('residence') or '').strip() or None
+    age_raw   = data.get('age')
+    try:
+        age = int(age_raw) if str(age_raw).strip() not in ('', 'None') else None
+        if age is not None and (age < 0 or age > 130):
+            age = None
+    except (TypeError, ValueError):
+        age = None
+
     if role not in ('patient', 'doctor'):
         role = 'patient'
 
@@ -900,7 +1108,13 @@ def register():
             db.session.add(new_user)
             db.session.flush()
             if role == 'patient':
-                ensure_patient_row_from_user(new_user, raw_password=password)
+                ensure_patient_row_from_user(
+                    new_user, raw_password=password,
+                    age=age, gender=gender, residence=residence
+                )
+
+        # Start a 3-month active subscription grace period for the new account.
+        get_or_create_subscription(new_user)
 
         log_system_action('USER_REGISTER', f'{email} registered as {role}')
         db.session.commit()
@@ -2765,6 +2979,158 @@ def dashboard_stats():
     }
     return jsonify({'success': True, 'stats': stats})
 
+
+# ============================================================
+#  SUBSCRIPTION, PAYMENT & CONTACT ROUTES (documentation scope)
+# ============================================================
+@app.route('/api/subscription/status', methods=['GET'])
+@login_required
+def subscription_status():
+    """Current user's subscription state (used for banners and freeze redirect)."""
+    if current_user.role == 'admin':
+        return jsonify({'success': True, 'subscription': {'applicable': False, 'role': 'admin'}})
+    try:
+        payload = subscription_status_payload(current_user)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Could not load subscription status.'}), 500
+    return jsonify({'success': True, 'subscription': payload})
+
+
+@app.route('/api/payments', methods=['POST'])
+@login_required
+def create_payment():
+    """
+    Record a mobile-money subscription payment and renew the subscription.
+    Simulated gateway: we trust the selected mode and mark the payment complete.
+    """
+    if current_user.role not in ('patient', 'doctor'):
+        return jsonify({'success': False, 'message': 'Subscriptions apply to patients and doctors only.'}), 400
+
+    data = request.json or {}
+    mode_key = (data.get('payment_mode') or data.get('mode') or '').strip().lower()
+    phone_raw = (data.get('phone') or '').strip()
+    mode_label = PAYMENT_MODES.get(mode_key)
+    if not mode_label:
+        return jsonify({'success': False, 'message': 'Choose a valid payment mode: Airtel Money, MTN Mobile Money, or Zamtel Money.'}), 400
+    if phone_raw and not validate_phone(phone_raw):
+        return jsonify({'success': False, 'message': PHONE_VALIDATION_MESSAGE}), 400
+
+    try:
+        payment = record_subscription_payment(current_user, mode_label, phone=_normalize_phone_digits(phone_raw) or None)
+        log_system_action('SUBSCRIPTION_PAYMENT', f'{current_user.email} paid {payment.amount} via {mode_label}', current_user)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Payment could not be processed. Please try again.'}), 500
+
+    return jsonify({
+        'success': True,
+        'message': f'Payment of {SUBSCRIPTION_CURRENCY} {payment.amount:.0f} received. Subscription renewed.',
+        'payment': payment.to_dict(),
+        'subscription': subscription_status_payload(current_user),
+    })
+
+
+@app.route('/api/contact', methods=['POST'])
+def submit_contact_message():
+    """
+    Public "Contact Care Team" submission. Stored for the admin inbox.
+    Works for guests and logged-in patients/doctors.
+    """
+    data = request.json or {}
+    name = (data.get('name') or '').strip()
+    email = (data.get('email') or '').strip()
+    subject = (data.get('subject') or '').strip()
+    message = (data.get('message') or '').strip()
+
+    if not name or not message:
+        return jsonify({'success': False, 'message': 'Please provide your name and a message.'}), 400
+    if email and not validate_email(email):
+        return jsonify({'success': False, 'message': 'Please enter a valid email address.'}), 400
+
+    sender_id = None
+    role = 'guest'
+    if current_user.is_authenticated:
+        sender_id = current_user.id
+        role = current_user.role or 'guest'
+        if not email:
+            email = current_user.email
+
+    try:
+        msg = ContactMessage(
+            sender_user_id=sender_id,
+            name=name[:120],
+            email=email[:120],
+            subject=(subject[:200] or 'General enquiry'),
+            message=message,
+            role=role,
+            status='unread',
+        )
+        db.session.add(msg)
+        log_system_action('CONTACT_MESSAGE', f'{name} <{email}> sent a message to admin')
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': 'Message could not be sent. Please try again.'}), 500
+
+    return jsonify({'success': True, 'message': 'Message sent! Our care team will respond shortly.'})
+
+
+@app.route('/api/admin/payments', methods=['GET'])
+@login_required
+@require_role('admin')
+def admin_list_payments():
+    """All subscription payments for the admin payments page."""
+    rows = Payment.query.order_by(Payment.paid_at.desc()).all()
+    return jsonify({'success': True, 'payments': [p.to_dict() for p in rows]})
+
+
+@app.route('/api/admin/subscriptions', methods=['GET'])
+@login_required
+@require_role('admin')
+def admin_list_subscriptions():
+    """All subscriptions (with user name/email) for the admin overview."""
+    rows = (
+        db.session.query(Subscription, User)
+        .join(User, User.id == Subscription.user_id)
+        .order_by(Subscription.expiry_date.asc())
+        .all()
+    )
+    out = []
+    for sub, user in rows:
+        refresh_subscription_state(sub)
+        d = sub.to_dict()
+        d['name'] = user.name
+        d['email'] = user.email
+        out.append(d)
+    db.session.commit()
+    return jsonify({'success': True, 'subscriptions': out})
+
+
+@app.route('/api/admin/contact-messages', methods=['GET'])
+@login_required
+@require_role('admin')
+def admin_list_contact_messages():
+    """Contact Care Team inbox for admins."""
+    rows = ContactMessage.query.order_by(ContactMessage.created_at.desc()).all()
+    unread = sum(1 for r in rows if r.status == 'unread')
+    return jsonify({'success': True, 'messages': [m.to_dict() for m in rows], 'unread': unread})
+
+
+@app.route('/api/admin/contact-messages/<int:msg_id>/read', methods=['POST'])
+@login_required
+@require_role('admin')
+def admin_mark_contact_message_read(msg_id):
+    msg = ContactMessage.query.get(msg_id)
+    if not msg:
+        return jsonify({'success': False, 'message': 'Message not found.'}), 404
+    msg.status = 'read'
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 # --- DATABASE INITIALIZATION & MIGRATION ---
 def init_db():
     with app.app_context():
@@ -2783,6 +3149,9 @@ def init_db():
             ("ALTER TABLE users ADD COLUMN is_default_password BOOLEAN DEFAULT 0",),
             ("ALTER TABLE PATIENT ADD COLUMN date_created TEXT",),
             ("ALTER TABLE doctor_profiles ADD COLUMN clinical_doctor_id INTEGER",),
+            # Documentation scope: patient demographics + subscriptions.
+            ("ALTER TABLE PATIENT ADD COLUMN age INTEGER",),
+            ("ALTER TABLE PATIENT ADD COLUMN residence TEXT",),
         ]
         with db.engine.connect() as conn:
             for (sql,) in migrations:
@@ -2811,6 +3180,8 @@ def init_db():
         backfill_patient_rows_from_app_users()
         # Ensure all approved doctors (including non-demo registrations) are mirrored in DOCTOR.
         sync_approved_doctors_to_clinical_directory()
+        # Give every existing patient/doctor a subscription (3-month active grace).
+        backfill_subscriptions_for_existing_users()
         if not Facility.query.first():
             db.session.add(Facility(
                 name='MediPath Central Hospital',

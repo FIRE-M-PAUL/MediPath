@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Messages - MediPath Admin</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .msg-card { border-left: 4px solid var(--border-color); transition: var(--transition-fast); }
+        .msg-card.unread { border-left-color: var(--primary-color); background: var(--primary-light); }
+        .msg-head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; }
+        .msg-meta { font-size:0.8rem; color:var(--text-light); }
+        .msg-body { margin-top:0.6rem; white-space:pre-wrap; color:var(--text-color); }
+    </style>
+</head>
+<body style="background-color: #f8fafc;">
+
+    <!-- Admin Mobile Header -->
+    <header class="admin-mobile-header">
+        <div class="logo">
+            <span class="logo-cross">+</span> MediPath
+        </div>
+        <button class="hamburger-btn" onclick="toggleSidebar()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">
+            ☰
+        </button>
+    </header>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="admin-dashboard.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath <span style="font-size: 0.8rem; opacity: 0.7;">Admin</span>
+                </a>
+            </div>
+
+            <p class="sidebar-label">Management</p>
+            <ul class="sidebar-menu">
+                <li><a href="admin-dashboard.html" class="sidebar-link">📊 System Overview</a></li>
+                <li><a href="admin-doctors.html" class="sidebar-link">👨‍⚕️ Verify Physicians</a></li>
+                <li><a href="admin-patients.html" class="sidebar-link">👥 Manage Users</a></li>
+                <li><a href="admin-appointments.html" class="sidebar-link">📅 All Appointments</a></li>
+                <li><a href="admin-admins.html" class="sidebar-link">🛡️ Manage Team</a></li>
+                <li><a href="admin-reports.html" class="sidebar-link">📈 Analytics Reports</a></li>
+                <li><a href="admin-payments.html" class="sidebar-link">💳 Payments</a></li>
+                <li><a href="admin-contact.html" class="sidebar-link active">✉️ Messages</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <button onclick="logoutAdmin()" class="sidebar-link logout-link" style="width: 100%; border: none; cursor: pointer;">
+                    🚪 Logout System
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="mb-3" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <h1 style="font-weight: 800; letter-spacing: -0.02em; font-size: clamp(1.4rem, 4vw, 2rem);">Contact Care Team — Inbox</h1>
+                    <p style="color: #64748b; margin-bottom: 0;">Messages submitted from the Contact page by patients, doctors, and visitors.</p>
+                </div>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <span class="badge badge-pending" id="unread-count">0 unread</span>
+                    <button onclick="loadMessages()" class="btn btn-outline btn-sm">🔄 Refresh</button>
+                </div>
+            </header>
+
+            <div class="card mb-2" style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+                <input type="text" id="search-input" class="form-control" placeholder="🔍 Search name, subject or message…" style="flex:1; min-width:220px;" oninput="renderMessages()">
+                <select id="status-filter" class="form-control" style="max-width:180px;" onchange="renderMessages()">
+                    <option value="">All messages</option>
+                    <option value="unread">Unread only</option>
+                    <option value="read">Read only</option>
+                </select>
+            </div>
+
+            <div id="messages-list" style="display:flex; flex-direction:column; gap:1rem;">
+                <div class="card text-center">Loading messages…</div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../script.js"></script>
+    <script src="admin.js"></script>
+    <script>
+        let _messages = [];
+
+        function fmtDateTime(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            return isNaN(d) ? iso : d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+        }
+
+        function roleTag(role) {
+            const map = { patient: '#2563eb', doctor: '#10b981', admin: '#6366f1', guest: '#64748b' };
+            const color = map[role] || '#64748b';
+            return `<span class="badge" style="background:${color}20; color:${color};">${role || 'guest'}</span>`;
+        }
+
+        async function loadMessages() {
+            const res = await API.get('/admin/contact-messages');
+            if (!res || !res.success) {
+                document.getElementById('messages-list').innerHTML =
+                    '<div class="card text-center">Could not load messages.</div>';
+                return;
+            }
+            _messages = res.messages || [];
+            document.getElementById('unread-count').textContent = (res.unread || 0) + ' unread';
+            renderMessages();
+        }
+
+        function renderMessages() {
+            const q = (document.getElementById('search-input').value || '').toLowerCase();
+            const statusF = document.getElementById('status-filter').value;
+
+            const rows = _messages.filter(m => {
+                if (statusF && m.status !== statusF) return false;
+                if (q) {
+                    const hay = `${m.name} ${m.subject} ${m.message} ${m.email}`.toLowerCase();
+                    if (!hay.includes(q)) return false;
+                }
+                return true;
+            });
+
+            const list = document.getElementById('messages-list');
+            list.innerHTML = rows.map(m => `
+                <div class="card msg-card ${m.status === 'unread' ? 'unread' : ''}">
+                    <div class="msg-head">
+                        <div>
+                            <div style="font-weight:700; font-size:1rem;">${m.subject || 'General enquiry'}</div>
+                            <div class="msg-meta">
+                                ${roleTag(m.role)} &nbsp;<strong>${m.name || 'Unknown'}</strong>
+                                ${m.email ? `· <a href="mailto:${m.email}">${m.email}</a>` : ''}
+                                · ${fmtDateTime(m.created_at)}
+                            </div>
+                        </div>
+                        ${m.status === 'unread'
+                            ? `<button class="btn btn-primary btn-sm" onclick="markRead(${m.id})">Mark read</button>`
+                            : '<span class="badge badge-approved">Read</span>'}
+                    </div>
+                    <div class="msg-body">${(m.message || '').replace(/</g, '&lt;')}</div>
+                </div>
+            `).join('') || '<div class="card text-center">No messages found.</div>';
+        }
+
+        window.markRead = async function(id) {
+            const res = await API.post(`/admin/contact-messages/${id}/read`, {});
+            if (res && res.success) {
+                showToast('Message marked as read.', 'success');
+                loadMessages();
+            } else {
+                showToast((res && res.message) || 'Could not update message.', 'error');
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', loadMessages);
+    </script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Renew your MediPath subscription with mobile money.">
+    <title>Subscription & Payment - MediPath</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        body { background-color: #f0f4ff; display: flex; flex-direction: column; min-height: 100vh; }
+        [data-theme="dark"] body { background-color: #07101f; }
+
+        .pay-wrap { flex: 1; width: 92%; max-width: 880px; margin: 2.5rem auto; }
+        .pay-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 1.5rem; align-items: start; }
+
+        .status-card { border-top: 4px solid var(--primary-color); }
+        .status-row { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px dashed var(--border-color); font-size: 0.92rem; }
+        .status-row:last-child { border-bottom: none; }
+        .status-row .k { color: var(--text-light); }
+        .status-row .v { font-weight: 700; color: var(--text-color); }
+
+        .state-pill { display:inline-block; padding:0.25rem 0.75rem; border-radius:999px; font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; }
+        .state-active { background:#d1fae5; color:#059669; }
+        .state-frozen { background:#fee2e2; color:#dc2626; }
+        .state-pending { background:#fef3c7; color:#d97706; }
+
+        .mode-options { display: grid; grid-template-columns: 1fr; gap: 0.75rem; margin: 0.5rem 0 1.25rem; }
+        .mode-option { display: flex; align-items: center; gap: 0.75rem; padding: 0.9rem 1rem; border: 2px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition-fast); background: var(--bg-color); }
+        .mode-option:hover { border-color: var(--primary-color); }
+        .mode-option.selected { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); background: var(--surface-color); }
+        .mode-option input { accent-color: var(--primary-color); width: 18px; height: 18px; }
+        .mode-logo { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; flex-shrink: 0; }
+        .logo-airtel { background: #e4002b; }
+        .logo-mtn { background: #ffcc00; color: #1e293b; }
+        .logo-zamtel { background: #009639; }
+        .mode-name { font-weight: 700; font-size: 0.95rem; }
+        .mode-sub { font-size: 0.78rem; color: var(--text-light); }
+
+        .amount-box { background: var(--surface-2); border-radius: var(--radius-sm); padding: 1rem 1.25rem; display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.25rem; }
+        .amount-box .amt { font-size: 1.6rem; font-weight: 800; color: var(--primary-color); letter-spacing: -0.02em; }
+
+        @media (max-width: 768px) { .pay-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+
+<body>
+    <!-- Top bar -->
+    <nav style="background: var(--surface-color); border-bottom: 1px solid var(--border-color); padding: 0.875rem 0; position: sticky; top:0; z-index:100;">
+        <div style="width:92%; max-width:1100px; margin:0 auto; display:flex; align-items:center; justify-content:space-between;">
+            <a href="/index.html" style="display:flex; align-items:center; gap:0.375rem; font-size:1.4rem; font-weight:800; color:var(--primary-color); text-decoration:none;">
+                <span style="width:28px;height:28px;background:var(--primary-color);color:white;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;font-weight:900;">+</span>
+                MediPath
+            </a>
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+                <a id="back-link" href="/user/dashboard.html" style="font-size:0.85rem; font-weight:700; color:var(--primary-color); text-decoration:none;">← Dashboard</a>
+                <button id="dark-mode-toggle" title="Toggle Dark Mode" style="background:var(--surface-2);border:1px solid var(--border-color);border-radius:50%;width:36px;height:36px;cursor:pointer;">🌙</button>
+                <button onclick="MediPathLogout()" class="btn btn-outline btn-sm">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="pay-wrap">
+        <div style="text-align:center; margin-bottom:1.5rem;">
+            <span class="section-badge">Subscription</span>
+            <h1 style="font-size: clamp(1.6rem, 4vw, 2.25rem); letter-spacing:-0.02em; margin-top:0.5rem;">Renew Your MediPath Subscription</h1>
+            <p class="text-light" style="max-width:560px; margin:0.25rem auto 0;">Keep your access active by paying with mobile money. Doctors: K100 every 3 months · Patients: K50 every 3 months.</p>
+        </div>
+
+        <div id="frozen-warning" class="alert" style="display:none; background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; margin-bottom:1.25rem;">
+            🔒 Your account is currently <strong>frozen</strong>. Complete a payment below to restore access to MediPath services.
+        </div>
+
+        <div class="pay-grid">
+            <!-- Current subscription -->
+            <div class="card status-card">
+                <h2 style="font-size:1.15rem; margin-bottom:0.75rem;">Your Subscription</h2>
+                <div class="status-row"><span class="k">Account</span><span class="v" id="s-name">—</span></div>
+                <div class="status-row"><span class="k">Role</span><span class="v" id="s-role">—</span></div>
+                <div class="status-row"><span class="k">Status</span><span class="v"><span id="s-state" class="state-pill state-active">—</span></span></div>
+                <div class="status-row"><span class="k">Payment status</span><span class="v" id="s-paystatus">—</span></div>
+                <div class="status-row"><span class="k">Start date</span><span class="v" id="s-start">—</span></div>
+                <div class="status-row"><span class="k">Expiry date</span><span class="v" id="s-expiry">—</span></div>
+                <div class="status-row"><span class="k">Days remaining</span><span class="v" id="s-days">—</span></div>
+            </div>
+
+            <!-- Payment form -->
+            <div class="card" style="border-top:4px solid var(--success-color);">
+                <h2 style="font-size:1.15rem; margin-bottom:0.25rem;">Make a Payment</h2>
+                <p class="text-light" style="font-size:0.85rem; margin-bottom:1rem;">Select your mobile money provider.</p>
+
+                <div class="amount-box">
+                    <span class="text-light" style="font-size:0.85rem;">Amount due (3 months)</span>
+                    <span class="amt" id="s-amount">K—</span>
+                </div>
+
+                <form id="payment-form">
+                    <div class="mode-options" id="mode-options">
+                        <label class="mode-option" data-mode="airtel">
+                            <input type="radio" name="payment_mode" value="airtel">
+                            <span class="mode-logo logo-airtel">A</span>
+                            <span><span class="mode-name">Airtel Money</span><br><span class="mode-sub">Pay with Airtel mobile money</span></span>
+                        </label>
+                        <label class="mode-option" data-mode="mtn">
+                            <input type="radio" name="payment_mode" value="mtn">
+                            <span class="mode-logo logo-mtn">M</span>
+                            <span><span class="mode-name">MTN Mobile Money</span><br><span class="mode-sub">Pay with MTN MoMo</span></span>
+                        </label>
+                        <label class="mode-option" data-mode="zamtel">
+                            <input type="radio" name="payment_mode" value="zamtel">
+                            <span class="mode-logo logo-zamtel">Z</span>
+                            <span><span class="mode-name">Zamtel Money</span><br><span class="mode-sub">Pay with Zamtel Kwacha</span></span>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="pay-phone">Mobile Money Number</label>
+                        <input type="tel" id="pay-phone" class="form-control" placeholder="e.g. 0971234567"
+                            maxlength="10" inputmode="numeric"
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,10)">
+                        <span class="error-msg" id="pay-phone-error"></span>
+                    </div>
+
+                    <button type="submit" id="pay-submit" class="btn btn-primary" style="width:100%; padding:0.95rem; font-size:1rem;">
+                        💳 Pay & Renew
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <footer class="disclaimer" style="margin-top:auto;">
+        ⚠️ MediPath subscription payments are billed every 3 months. Frozen accounts regain access immediately after payment.
+    </footer>
+
+    <script src="/script.js"></script>
+    <script>
+    (function () {
+        'use strict';
+        const user = (typeof Auth !== 'undefined' && Auth.getUser) ? Auth.getUser() : null;
+
+        // Must be logged in as patient/doctor.
+        if (!user) { window.location.href = '/login.html'; return; }
+        if (user.role === 'admin') { window.location.href = '/admin/admin-dashboard.html'; return; }
+
+        // Point the back link at the correct dashboard.
+        document.getElementById('back-link').href =
+            user.role === 'doctor' ? '/doctor/doctor-dashboard.html' : '/user/dashboard.html';
+
+        function fmtDate(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            return isNaN(d) ? iso : d.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        async function loadStatus() {
+            const res = await API.get('/subscription/status');
+            if (!res || !res.success) return;
+            const s = res.subscription || {};
+            if (!s.applicable) return;
+
+            document.getElementById('s-name').textContent = user.name || '—';
+            document.getElementById('s-role').textContent = (s.role || '').charAt(0).toUpperCase() + (s.role || '').slice(1);
+            document.getElementById('s-paystatus').textContent = (s.payment_status || '—');
+            document.getElementById('s-start').textContent = fmtDate(s.start_date);
+            document.getElementById('s-expiry').textContent = fmtDate(s.expiry_date);
+            document.getElementById('s-days').textContent = (s.days_left != null) ? `${s.days_left} day(s)` : '—';
+            document.getElementById('s-amount').textContent = 'K' + (s.fee != null ? s.fee : '—');
+
+            const state = document.getElementById('s-state');
+            if (s.frozen) {
+                state.textContent = 'Frozen';
+                state.className = 'state-pill state-frozen';
+                document.getElementById('frozen-warning').style.display = 'flex';
+            } else if (s.payment_status === 'paid') {
+                state.textContent = 'Active';
+                state.className = 'state-pill state-active';
+            } else {
+                state.textContent = s.account_status || 'Active';
+                state.className = 'state-pill ' + (s.account_status === 'active' ? 'state-active' : 'state-pending');
+            }
+        }
+
+        // Highlight selected mode
+        document.querySelectorAll('.mode-option').forEach(opt => {
+            opt.addEventListener('click', () => {
+                document.querySelectorAll('.mode-option').forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected');
+                opt.querySelector('input').checked = true;
+            });
+        });
+
+        document.getElementById('payment-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const mode = (document.querySelector('input[name="payment_mode"]:checked') || {}).value;
+            const phone = document.getElementById('pay-phone').value.trim();
+            const errEl = document.getElementById('pay-phone-error');
+            errEl.textContent = '';
+
+            if (!mode) { showToast('Please select a payment mode.', 'error'); return; }
+            if (phone && !/^(095|096|097|076|077)\d{7}$/.test(phone)) {
+                errEl.textContent = 'Enter a valid 10-digit Zambian mobile number (095/096/097/076/077).';
+                return;
+            }
+
+            const btn = document.getElementById('pay-submit');
+            btn.disabled = true;
+            const original = btn.textContent;
+            btn.textContent = 'Processing...';
+
+            const result = await API.post('/payments', { payment_mode: mode, phone: phone });
+            btn.disabled = false;
+            btn.textContent = original;
+
+            if (result && result.success) {
+                showToast(result.message || 'Payment successful! Subscription renewed.', 'success');
+                document.getElementById('frozen-warning').style.display = 'none';
+                await loadStatus();
+                setTimeout(() => {
+                    window.location.href = user.role === 'doctor'
+                        ? '/doctor/doctor-dashboard.html'
+                        : '/user/dashboard.html';
+                }, 1800);
+            } else {
+                showToast((result && result.message) || 'Payment failed. Please try again.', 'error');
+            }
+        });
+
+        window.MediPathLogout = function () {
+            if (typeof Auth !== 'undefined' && Auth.logout) Auth.logout();
+            else window.location.href = '/login.html';
+        };
+
+        loadStatus();
+    })();
+    </script>
+</body>
+</html>

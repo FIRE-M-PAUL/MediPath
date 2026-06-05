@@ -214,6 +214,17 @@ const API = {
                 }
                 return { success: false, message, unauthorized: true };
             }
+            if (response.status === 402) {
+                let payload = {};
+                try { payload = await response.json(); } catch (_) {}
+                if (payload && payload.frozen) {
+                    try { showToast(payload.message || 'Subscription expired. Redirecting to payment...', 'error'); } catch (_) {}
+                    if (!window.location.pathname.endsWith('payment.html')) {
+                        window.location.href = '/payment.html';
+                    }
+                }
+                return { success: false, frozen: true, message: (payload && payload.message) || 'Subscription required.' };
+            }
             const ct = (response.headers.get('content-type') || '').toLowerCase();
             let result;
             if (ct.includes('application/json')) {
@@ -1088,3 +1099,66 @@ function getStatusBadge(status) {
         default:          return `<span class="badge">${status}</span>`;
     }
 }
+
+// ============================================================
+// 17. Subscription enforcement & expiry reminders (documentation scope)
+//     - Frozen patients/doctors are redirected to the payment page.
+//     - "Expiring soon" accounts get a dismissible reminder banner.
+//     Runs automatically on every page that loads script.js.
+// ============================================================
+const MediPathSubscription = {
+    // Pages where we must NOT redirect/banner (auth, payment, public info).
+    EXEMPT_PAGES: [
+        'payment.html', 'login.html', 'register.html',
+        'doctor-login.html', 'doctor-register.html', 'doctor-pending.html',
+        'admin-login.html', 'index.html', 'contact.html', 'emergency.html', ''
+    ],
+    currentFile() {
+        const path = window.location.pathname;
+        return (path.split('/').pop() || 'index.html').toLowerCase();
+    },
+    async enforce() {
+        try {
+            const user = (typeof Auth !== 'undefined' && Auth.getUser) ? Auth.getUser() : null;
+            if (!user || (user.role !== 'patient' && user.role !== 'doctor')) return;
+            if (window.location.pathname.includes('/admin/')) return;
+            if (this.EXEMPT_PAGES.includes(this.currentFile())) return;
+
+            const result = await API.get('/subscription/status');
+            if (!result || !result.success) return;
+            const sub = result.subscription || {};
+            if (!sub.applicable) return;
+
+            if (sub.frozen) {
+                window.location.href = '/payment.html';
+                return;
+            }
+            if (sub.expiring_soon) {
+                this.showBanner(sub);
+            }
+        } catch (_) { /* never block the page on subscription errors */ }
+    },
+    showBanner(sub) {
+        if (document.getElementById('subscription-reminder')) return;
+        const days = (sub.days_left === 0) ? 'today' : `in ${sub.days_left} day${sub.days_left === 1 ? '' : 's'}`;
+        const bar = document.createElement('div');
+        bar.id = 'subscription-reminder';
+        bar.setAttribute('role', 'status');
+        bar.style.cssText = [
+            'position:relative', 'z-index:1200', 'display:flex', 'align-items:center',
+            'justify-content:center', 'gap:0.75rem', 'flex-wrap:wrap',
+            'background:linear-gradient(90deg,#f59e0b,#ef4444)', 'color:#fff',
+            'padding:0.6rem 1rem', 'font-size:0.85rem', 'font-weight:600'
+        ].join(';');
+        bar.innerHTML =
+            `<span>⏳ Your MediPath subscription expires ${days}. Renew to avoid interruption.</span>` +
+            `<a href="/payment.html" style="background:#fff;color:#b91c1c;padding:0.3rem 0.85rem;border-radius:999px;font-weight:700;text-decoration:none;">Renew now</a>` +
+            `<button type="button" aria-label="Dismiss" style="background:none;border:none;color:#fff;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>`;
+        bar.querySelector('button').addEventListener('click', () => bar.remove());
+        document.body.insertBefore(bar, document.body.firstChild);
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    MediPathSubscription.enforce();
+});

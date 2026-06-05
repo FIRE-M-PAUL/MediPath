@@ -205,18 +205,6 @@
     <div class="container">
         <div class="emergency-grid">
             <div class="emer-card">
-                <span class="emer-card-icon">🏥</span>
-                <h3>Find Nearest ER</h3>
-                <p>Locate the nearest emergency room or urgent care center using your current location.</p>
-                <button type="button" class="emer-action-btn" onclick="findNearestER()">📍 Find ER Near Me</button>
-            </div>
-            <div class="emer-card">
-                <span class="emer-card-icon">👨‍⚕️</span>
-                <h3>Emergency Specialist</h3>
-                <p>Connect with an on-call emergency specialist who can provide immediate guidance.</p>
-                <a href="doctors.html" class="emer-action-btn">🩺 Find Specialist</a>
-            </div>
-            <div class="emer-card">
                 <span class="emer-card-icon">🔍</span>
                 <h3>Symptom Check</h3>
                 <p>Quickly assess your symptoms with our AI to understand the urgency of your situation.</p>
@@ -275,30 +263,6 @@
             if (typeof showToast === 'function') {
                 showToast(`Dial ${EMERGENCY_NUMBER} immediately for emergencies.`, 'error');
             }
-        }
-
-        function findNearestER() {
-            if (!navigator.geolocation) {
-                window.location.href = 'contact.html';
-                return;
-            }
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const { latitude, longitude } = pos.coords;
-                    const mapsUrl = `https://www.google.com/maps/search/emergency+room+near+me/@${latitude},${longitude},14z`;
-                    window.open(mapsUrl, '_blank', 'noopener');
-                    if (typeof showToast === 'function') {
-                        showToast('Opening nearby emergency facilities…', 'info');
-                    }
-                },
-                () => {
-                    window.location.href = 'contact.html';
-                    if (typeof showToast === 'function') {
-                        showToast('Location unavailable — showing contact options.', 'error');
-                    }
-                },
-                { enableHighAccuracy: true, timeout: 10000 }
-            );
         }
 
         document.getElementById('call-911-btn')?.addEventListener('click', triggerEmergencyCall);

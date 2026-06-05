@@ -7,6 +7,7 @@
     <meta name="description"
         content="MediPath - Smart Healthcare Navigation System. Describe your symptoms, find the right specialist, and get healthcare guidance instantly.">
     <title>MediPath - Smart Healthcare Navigation System</title>
+    <link rel="preload" as="image" href="assets/hero-bg.png">
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -39,43 +40,101 @@
     </header>
 
     <!-- ===== HERO SECTION ===== -->
-    <section class="hero" id="hero">
+    <section class="hero hero-split" id="hero">
         <div class="hero-particles">
             <div class="particle"></div><div class="particle"></div><div class="particle"></div>
             <div class="particle"></div><div class="particle"></div><div class="particle"></div>
         </div>
-        <div class="container hero-content">
-            <div class="hero-badge animate-fadeInUp">🏥 Healthcare Navigation System</div>
-            <h1 class="hero-title animate-fadeInUp delay-1">MediPath</h1>
-            <p class="hero-subtitle animate-fadeInUp delay-2">Smart Healthcare Navigation System</p>
-            <p class="hero-description animate-fadeInUp delay-2">
-                Describe your symptoms, find the right specialist, and get healthcare guidance instantly.
-            </p>
-            <div class="hero-buttons animate-fadeInUp delay-3">
-                <a href="login.html" class="btn btn-primary btn-lg" id="get-started-btn">
-                    🚀 Get Started
-                </a>
-                <a href="doctors.html" class="btn btn-outline btn-lg" id="find-doctor-btn">
-                    👨‍⚕️ Find Doctor
-                </a>
-                <a href="appointments.html" class="btn btn-accent btn-lg" id="book-appointment-btn">
-                    📅 Book Appointment
-                </a>
+        <div class="container hero-grid">
+            <!-- Left: copy + CTAs -->
+            <div class="hero-copy">
+                <div class="hero-badge animate-fadeInUp">🏥 Smart Healthcare Navigation</div>
+                <h1 class="hero-title animate-fadeInUp delay-1">
+                    Describe symptoms.<br>
+                    Find the right <span class="hero-highlight">specialist</span>.
+                </h1>
+                <p class="hero-subtitle animate-fadeInUp delay-2">MediPath — guidance you can trust, in seconds.</p>
+                <p class="hero-description animate-fadeInUp delay-2">
+                    Our AI analyzes your symptoms, matches you with verified doctors, and helps you book
+                    care — all in one calm, secure place.
+                </p>
+                <div class="hero-buttons animate-fadeInUp delay-3">
+                    <a href="login.html" class="btn btn-primary btn-lg" id="get-started-btn">
+                        🚀 Get Started
+                    </a>
+                    <a href="doctors.html" class="btn btn-outline btn-lg" id="find-doctor-btn">
+                        👨‍⚕️ Find Doctor
+                    </a>
+                    <a href="appointments.html" class="btn btn-accent btn-lg" id="book-appointment-btn">
+                        📅 Book Appointment
+                    </a>
+                </div>
+                <div class="hero-stats animate-fadeInUp delay-4">
+                    <div class="stat-item">
+                        <span class="stat-number">500+</span>
+                        <span class="stat-label">Verified Doctors</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <span class="stat-number">10K+</span>
+                        <span class="stat-label">Patients Served</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <span class="stat-number">24/7</span>
+                        <span class="stat-label">Emergency Support</span>
+                    </div>
+                </div>
+                <div class="hero-trust animate-fadeInUp delay-4">
+                    <span class="trust-pill">🔒 256-bit Encryption</span>
+                    <span class="trust-pill">🛡️ Private &amp; Secure</span>
+                    <span class="trust-pill">✅ Verified Doctors</span>
+                    <span class="trust-pill">⚡ Instant Guidance</span>
+                </div>
             </div>
-            <div class="hero-stats animate-fadeInUp delay-4">
-                <div class="stat-item">
-                    <span class="stat-number">500+</span>
-                    <span class="stat-label">Verified Doctors</span>
+
+            <!-- Right: floating healthcare cards -->
+            <div class="hero-visual animate-fadeInUp delay-3" aria-hidden="true">
+                <div class="hero-orb"></div>
+                <svg class="hero-pulse" viewBox="0 0 240 60" preserveAspectRatio="none" aria-hidden="true">
+                    <polyline points="0,30 40,30 55,12 70,48 90,30 130,30 145,18 160,42 180,30 240,30"
+                        fill="none" stroke="currentColor" stroke-width="3"
+                        stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+
+                <!-- AI Assistant card -->
+                <div class="float-card fc-ai">
+                    <div class="fc-head">
+                        <span class="fc-avatar fc-avatar-ai">🤖</span>
+                        <div>
+                            <div class="fc-title">AI Symptom Analysis</div>
+                            <div class="fc-sub">Analyzing 3 symptoms…</div>
+                        </div>
+                    </div>
+                    <div class="fc-result">
+                        <span class="fc-dot"></span> Likely: <strong>Tension headache</strong>
+                    </div>
+                    <div class="fc-bar"><span style="width:82%"></span></div>
+                    <div class="fc-muted">82% match · See a General Practitioner</div>
                 </div>
-                <div class="stat-divider"></div>
-                <div class="stat-item">
-                    <span class="stat-number">10K+</span>
-                    <span class="stat-label">Patients Served</span>
+
+                <!-- Doctor card -->
+                <div class="float-card fc-doctor">
+                    <span class="fc-avatar fc-avatar-doc">MP</span>
+                    <div>
+                        <div class="fc-title">Dr. Mary Phiri</div>
+                        <div class="fc-sub">Pediatrician · ⭐ 4.9</div>
+                    </div>
+                    <span class="fc-status fc-online">Online</span>
                 </div>
-                <div class="stat-divider"></div>
-                <div class="stat-item">
-                    <span class="stat-number">24/7</span>
-                    <span class="stat-label">Emergency Support</span>
+
+                <!-- Appointment card -->
+                <div class="float-card fc-appt">
+                    <span class="fc-check">✓</span>
+                    <div>
+                        <div class="fc-title">Appointment Confirmed</div>
+                        <div class="fc-sub">Cardiology · Tomorrow, 10:00 AM</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -271,8 +330,8 @@
                 <div class="footer-contact">
                     <h4 class="footer-heading">Contact Information</h4>
                     <ul class="contact-info-list">
-                        <li>📍 123 Health Avenue, Medical District</li>
-                        <li>📞 +1 (555) 000-MEDI</li>
+                        <li>👤 MediPath Support Team</li>
+                        <li>📞 0979230392</li>
                         <li>✉️ support@medipath.health</li>
                         <li>🕐 24/7 Emergency Support Available</li>
                     </ul>

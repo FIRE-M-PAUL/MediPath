@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription Payments - MediPath Admin</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body style="background-color: #f8fafc;">
+
+    <!-- Admin Mobile Header -->
+    <header class="admin-mobile-header">
+        <div class="logo">
+            <span class="logo-cross">+</span> MediPath
+        </div>
+        <button class="hamburger-btn" onclick="toggleSidebar()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">
+            ☰
+        </button>
+    </header>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="admin-dashboard.html" class="logo">
+                    <span class="logo-cross">+</span> MediPath <span style="font-size: 0.8rem; opacity: 0.7;">Admin</span>
+                </a>
+            </div>
+
+            <p class="sidebar-label">Management</p>
+            <ul class="sidebar-menu">
+                <li><a href="admin-dashboard.html" class="sidebar-link">📊 System Overview</a></li>
+                <li><a href="admin-doctors.html" class="sidebar-link">👨‍⚕️ Verify Physicians</a></li>
+                <li><a href="admin-patients.html" class="sidebar-link">👥 Manage Users</a></li>
+                <li><a href="admin-appointments.html" class="sidebar-link">📅 All Appointments</a></li>
+                <li><a href="admin-admins.html" class="sidebar-link">🛡️ Manage Team</a></li>
+                <li><a href="admin-reports.html" class="sidebar-link">📈 Analytics Reports</a></li>
+                <li><a href="admin-payments.html" class="sidebar-link active">💳 Payments</a></li>
+                <li><a href="admin-contact.html" class="sidebar-link">✉️ Messages</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <button onclick="logoutAdmin()" class="sidebar-link logout-link" style="width: 100%; border: none; cursor: pointer;">
+                    🚪 Logout System
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="mb-3" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <h1 style="font-weight: 800; letter-spacing: -0.02em; font-size: clamp(1.4rem, 4vw, 2rem);">Subscription Payments</h1>
+                    <p style="color: #64748b; margin-bottom: 0;">All mobile-money subscription payments from patients and doctors.</p>
+                </div>
+                <button onclick="loadPayments()" class="btn btn-outline btn-sm">🔄 Refresh</button>
+            </header>
+
+            <!-- KPI cards -->
+            <div class="grid-4 admin-stats-grid mb-3" style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                <div class="card"><div style="font-size:0.8rem; color:#64748b;">TOTAL COLLECTED</div><div class="stat-number-lg" id="kpi-total" style="font-size:1.75rem; font-weight:800; color:var(--primary-color);">K0</div></div>
+                <div class="card"><div style="font-size:0.8rem; color:#64748b;">PAYMENTS</div><div class="stat-number-lg" id="kpi-count" style="font-size:1.75rem; font-weight:800;">0</div></div>
+                <div class="card"><div style="font-size:0.8rem; color:#64748b;">DOCTORS PAID</div><div class="stat-number-lg" id="kpi-doctors" style="font-size:1.75rem; font-weight:800; color:#10b981;">0</div></div>
+                <div class="card"><div style="font-size:0.8rem; color:#64748b;">PATIENTS PAID</div><div class="stat-number-lg" id="kpi-patients" style="font-size:1.75rem; font-weight:800; color:#0ea5e9;">0</div></div>
+            </div>
+
+            <!-- Filters -->
+            <div class="card mb-2" style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+                <input type="text" id="search-input" class="form-control" placeholder="🔍 Search by name…" style="flex:1; min-width:200px;" oninput="renderRows()">
+                <select id="role-filter" class="form-control" style="max-width:180px;" onchange="renderRows()">
+                    <option value="">All roles</option>
+                    <option value="doctor">Doctors</option>
+                    <option value="patient">Patients</option>
+                </select>
+                <select id="mode-filter" class="form-control" style="max-width:200px;" onchange="renderRows()">
+                    <option value="">All payment modes</option>
+                    <option value="Airtel Money">Airtel Money</option>
+                    <option value="MTN Mobile Money">MTN Mobile Money</option>
+                    <option value="Zamtel Money">Zamtel Money</option>
+                </select>
+            </div>
+
+            <div class="card">
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Payment Mode</th>
+                                <th>Amount</th>
+                                <th>Date Paid</th>
+                                <th>Subscription Expiry</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payments-tbody">
+                            <tr><td colspan="7" class="text-center py-3">Loading payments…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../script.js"></script>
+    <script src="admin.js"></script>
+    <script>
+        let _payments = [];
+
+        function fmtDate(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            return isNaN(d) ? iso : d.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function roleBadge(role) {
+            if (role === 'doctor') return '<span class="badge badge-approved">Doctor</span>';
+            if (role === 'patient') return '<span class="badge" style="background:#dbeafe;color:#2563eb;">Patient</span>';
+            return `<span class="badge">${role || '—'}</span>`;
+        }
+
+        async function loadPayments() {
+            const res = await API.get('/admin/payments');
+            if (!res || !res.success) {
+                document.getElementById('payments-tbody').innerHTML =
+                    '<tr><td colspan="7" class="text-center py-3">Could not load payments.</td></tr>';
+                return;
+            }
+            _payments = res.payments || [];
+
+            const total = _payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+            document.getElementById('kpi-total').textContent = 'K' + total;
+            document.getElementById('kpi-count').textContent = _payments.length;
+            document.getElementById('kpi-doctors').textContent = _payments.filter(p => p.role === 'doctor').length;
+            document.getElementById('kpi-patients').textContent = _payments.filter(p => p.role === 'patient').length;
+
+            renderRows();
+        }
+
+        function renderRows() {
+            const q = (document.getElementById('search-input').value || '').toLowerCase();
+            const roleF = document.getElementById('role-filter').value;
+            const modeF = document.getElementById('mode-filter').value;
+
+            const rows = _payments.filter(p => {
+                if (q && !(p.payer_name || '').toLowerCase().includes(q)) return false;
+                if (roleF && p.role !== roleF) return false;
+                if (modeF && p.payment_mode !== modeF) return false;
+                return true;
+            });
+
+            const tbody = document.getElementById('payments-tbody');
+            tbody.innerHTML = rows.map(p => `
+                <tr>
+                    <td style="font-weight:700;">${p.payer_name || '—'}</td>
+                    <td>${roleBadge(p.role)}</td>
+                    <td>${p.payment_mode || '—'}</td>
+                    <td style="font-weight:700; color:var(--primary-color);">K${Number(p.amount) || 0}</td>
+                    <td>${fmtDate(p.paid_at)}</td>
+                    <td>${fmtDate(p.expiry_date)}</td>
+                    <td><span class="badge badge-approved">${p.status || 'completed'}</span></td>
+                </tr>
+            `).join('') || '<tr><td colspan="7" class="text-center py-3">No payments found.</td></tr>';
+        }
+
+        document.addEventListener('DOMContentLoaded', loadPayments);
+    </script>
+</body>
+</html>

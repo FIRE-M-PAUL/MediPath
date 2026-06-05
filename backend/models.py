@@ -44,6 +44,13 @@ class User(db.Model, UserMixin):
         }
         if self.doctor_profile:
             d.update(self.doctor_profile.to_dict())
+        # Surface patient demographics (age/gender/residence) for profile/admin views.
+        if self.role == 'patient' and self.email:
+            p = Patient.query.filter_by(email=self.email.strip()).first()
+            if p:
+                d['age'] = p.age
+                d['gender'] = p.gender
+                d['residence'] = p.residence or p.address
         return d
 
 class DoctorProfile(db.Model):
@@ -138,6 +145,9 @@ class Patient(db.Model, PasswordMixin):
     password = db.Column(db.Text, nullable=False)
     # Optional: synced at registration / migration (SQLite ALTER adds column if missing)
     date_created = db.Column(db.Text)
+    # Documentation scope: collected at registration.
+    age = db.Column(db.Integer)
+    residence = db.Column(db.Text)
 
 
 class Doctor(db.Model, PasswordMixin):
@@ -219,3 +229,93 @@ class SystemLog(db.Model):
     action = db.Column(db.Text, nullable=False)
     details = db.Column(db.Text)
     created_at = db.Column(db.Text, default=lambda: datetime.utcnow().isoformat())
+
+
+# ============================================================
+#  Subscription & Payment models (documentation scope)
+#  - One Subscription row per portal user (patient/doctor).
+#  - Payment rows are an immutable audit log of each payment.
+#  - ContactMessage stores "Contact Care Team" submissions for admin.
+# ============================================================
+class Subscription(db.Model):
+    __tablename__ = 'subscriptions'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
+    role = db.Column(db.String(20))                      # patient | doctor
+    start_date = db.Column(db.DateTime, default=datetime.utcnow)
+    expiry_date = db.Column(db.DateTime)
+    payment_status = db.Column(db.String(20), default='pending')   # pending | paid | overdue
+    account_status = db.Column(db.String(20), default='active')    # active | frozen
+    last_reminder_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'role': self.role,
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'expiry_date': self.expiry_date.isoformat() if self.expiry_date else None,
+            'payment_status': self.payment_status,
+            'account_status': self.account_status,
+        }
+
+
+class Payment(db.Model):
+    __tablename__ = 'payments'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    payer_name = db.Column(db.String(120))
+    role = db.Column(db.String(20))                      # patient | doctor
+    payment_mode = db.Column(db.String(40))             # Airtel Money | MTN Mobile Money | Zamtel Money
+    amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(8), default='ZMW')
+    phone = db.Column(db.String(20))
+    reference = db.Column(db.String(60))
+    period_months = db.Column(db.Integer, default=3)
+    expiry_date = db.Column(db.DateTime)               # subscription expiry produced by this payment
+    status = db.Column(db.String(20), default='completed')  # completed
+    paid_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'payer_name': self.payer_name,
+            'role': self.role,
+            'payment_mode': self.payment_mode,
+            'amount': self.amount,
+            'currency': self.currency,
+            'phone': self.phone,
+            'reference': self.reference,
+            'period_months': self.period_months,
+            'expiry_date': self.expiry_date.isoformat() if self.expiry_date else None,
+            'status': self.status,
+            'paid_at': self.paid_at.isoformat() if self.paid_at else None,
+        }
+
+
+class ContactMessage(db.Model):
+    __tablename__ = 'contact_messages'
+    id = db.Column(db.Integer, primary_key=True)
+    sender_user_id = db.Column(db.Integer, nullable=True)   # set when sender is logged in
+    name = db.Column(db.String(120))
+    email = db.Column(db.String(120))
+    subject = db.Column(db.String(200))
+    message = db.Column(db.Text, nullable=False)
+    role = db.Column(db.String(20), default='guest')        # patient | doctor | admin | guest
+    status = db.Column(db.String(20), default='unread')     # unread | read
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'sender_user_id': self.sender_user_id,
+            'name': self.name,
+            'email': self.email,
+            'subject': self.subject,
+            'message': self.message,
+            'role': self.role,
+            'status': self.status,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
