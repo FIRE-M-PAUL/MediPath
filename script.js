@@ -487,6 +487,7 @@ const Nav = {
                     <li><a href="doctor-appointments.html" class="nav-item" data-page="doctor-appointments">Appointments</a></li>
                     <li><a href="doctor-messages.html" class="nav-item" data-page="doctor-messages">Messages</a></li>
                     <li><a href="doctor-profile.html" class="nav-item" data-page="doctor-profile">Profile</a></li>
+                    <li><a href="/payment.html" class="nav-item" data-page="payment">💳 Subscription</a></li>
                 `;
             } else {
                 navMenu.innerHTML = `
@@ -495,6 +496,7 @@ const Nav = {
                     <li><a href="appointments.html" class="nav-item" data-page="appointments">Appointments</a></li>
                     <li><a href="user/messages.html" class="nav-item" data-page="messages">Messages</a></li>
                     <li><a href="ai-assistant.html" class="nav-item" data-page="ai-assistant">AI Assistant</a></li>
+                    <li><a href="/payment.html" class="nav-item" data-page="payment">💳 Subscription</a></li>
                     <li><a href="emergency.html" class="nav-item emergency-link" data-page="emergency">🚨 Emergency</a></li>
                 `;
             }
@@ -1134,27 +1136,45 @@ const MediPathSubscription = {
                 return;
             }
             if (sub.expiring_soon) {
-                this.showBanner(sub);
+                // Urgent: subscription is about to lapse within the reminder window.
+                this.showBanner(sub, 'urgent');
+            } else if (sub.payment_status && sub.payment_status !== 'paid') {
+                // Gentle nudge for users still on the free grace period (never paid yet).
+                this.showBanner(sub, 'pending');
             }
         } catch (_) { /* never block the page on subscription errors */ }
     },
-    showBanner(sub) {
+    showBanner(sub, mode) {
         if (document.getElementById('subscription-reminder')) return;
+        // A dismissed "pending" nudge stays hidden for the rest of the browser session.
+        if (mode === 'pending' && sessionStorage.getItem('mp_sub_nudge_dismissed') === '1') return;
+
+        const fee = (sub.currency || 'K') + (sub.fee != null ? sub.fee : '');
         const days = (sub.days_left === 0) ? 'today' : `in ${sub.days_left} day${sub.days_left === 1 ? '' : 's'}`;
+        const isUrgent = mode === 'urgent';
+        const message = isUrgent
+            ? `⏳ Your MediPath subscription expires ${days}. Renew (${fee}) to avoid interruption.`
+            : `💳 Subscribe to MediPath for ${fee} every 3 months to keep your account active.`;
+        const cta = isUrgent ? 'Renew now' : 'Subscribe now';
+
         const bar = document.createElement('div');
         bar.id = 'subscription-reminder';
         bar.setAttribute('role', 'status');
         bar.style.cssText = [
             'position:relative', 'z-index:1200', 'display:flex', 'align-items:center',
             'justify-content:center', 'gap:0.75rem', 'flex-wrap:wrap',
-            'background:linear-gradient(90deg,#f59e0b,#ef4444)', 'color:#fff',
-            'padding:0.6rem 1rem', 'font-size:0.85rem', 'font-weight:600'
+            'background:' + (isUrgent ? 'linear-gradient(90deg,#f59e0b,#ef4444)' : 'linear-gradient(90deg,#0ea5e9,#2563eb)'),
+            'color:#fff', 'padding:0.6rem 1rem', 'font-size:0.85rem', 'font-weight:600'
         ].join(';');
+        const ctaColor = isUrgent ? '#b91c1c' : '#1d4ed8';
         bar.innerHTML =
-            `<span>⏳ Your MediPath subscription expires ${days}. Renew to avoid interruption.</span>` +
-            `<a href="/payment.html" style="background:#fff;color:#b91c1c;padding:0.3rem 0.85rem;border-radius:999px;font-weight:700;text-decoration:none;">Renew now</a>` +
+            `<span>${message}</span>` +
+            `<a href="/payment.html" style="background:#fff;color:${ctaColor};padding:0.3rem 0.85rem;border-radius:999px;font-weight:700;text-decoration:none;">${cta}</a>` +
             `<button type="button" aria-label="Dismiss" style="background:none;border:none;color:#fff;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>`;
-        bar.querySelector('button').addEventListener('click', () => bar.remove());
+        bar.querySelector('button').addEventListener('click', () => {
+            if (mode === 'pending') sessionStorage.setItem('mp_sub_nudge_dismissed', '1');
+            bar.remove();
+        });
         document.body.insertBefore(bar, document.body.firstChild);
     }
 };
