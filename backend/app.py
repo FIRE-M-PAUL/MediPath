@@ -872,9 +872,15 @@ def _clinical_appointment_row_authorized(row):
         patient = get_or_create_clinical_patient(current_user)
         if not patient:
             return False
-        if _legacy_appointments_fk_to_users():
-            return row.patient_id in (current_user.id, patient.patient_id)
-        return row.patient_id == patient.patient_id
+        # Match only the id namespace this physical schema uses. Mixing
+        # users.id and PATIENT.patient_id lets one patient authorize against
+        # another patient's row when the two id sequences collide.
+        try:
+            if _legacy_appointments_fk_to_users():
+                return int(row.patient_id) == int(current_user.id)
+            return int(row.patient_id) == int(patient.patient_id)
+        except (TypeError, ValueError):
+            return False
     if current_user.role == 'doctor':
         return _doctor_owns_appointment_doctor_id(current_user, row.doctor_id)
     return False
@@ -1987,9 +1993,18 @@ def list_clinical_appointments():
             patient = get_or_create_clinical_patient(current_user)
             if not patient:
                 return jsonify([])
-            # Accept legacy rows keyed by users.id and clinical rows keyed by PATIENT.patient_id.
-            select_sql += f" WHERE {patient_col} IN (?, ?)"
-            params = [patient.patient_id, current_user.id]
+            # IMPORTANT: patient_id lives in ONE namespace per physical schema.
+            # Mixing users.id with PATIENT.patient_id here causes cross-patient
+            # leakage when one patient's users.id collides with another patient's
+            # clinical patient_id (two independent autoincrement sequences).
+            if _legacy_appointments_fk_to_users():
+                # Column references users.id -> match the portal user id only.
+                owned_patient_id = int(current_user.id)
+            else:
+                # Relational schema -> match the clinical PATIENT.patient_id only.
+                owned_patient_id = int(patient.patient_id)
+            select_sql += f" WHERE {patient_col} = ?"
+            params = [owned_patient_id]
             select_sql += " ORDER BY appointment_date ASC"
         elif current_user.role == 'doctor':
             if not current_user.id:
@@ -2514,9 +2529,13 @@ def doctor_patient_appointments(patient_user_id):
         })
 
     seen_keys = {(int(a.id), 'legacy') for a in legacy_rows}
-    candidate_patient_ids = {int(user.id)}
-    if clinical_patient:
-        candidate_patient_ids.add(int(clinical_patient.patient_id))
+    # Only match the patient_id namespace that this physical schema actually
+    # uses. Mixing users.id with PATIENT.patient_id can pull in a different
+    # patient's rows when the two id sequences collide.
+    if _legacy_appointments_fk_to_users():
+        candidate_patient_ids = {int(user.id)}
+    else:
+        candidate_patient_ids = {int(clinical_patient.patient_id)} if clinical_patient else set()
 
     clinical_rows = ClinicalAppointment.query.order_by(ClinicalAppointment.id.desc()).limit(500).all()
     for row in clinical_rows:
